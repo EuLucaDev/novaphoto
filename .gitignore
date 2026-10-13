@@ -1,0 +1,13 @@
+*~
+plan/
+/target
+target/
+/dist
+/corpus
+/log
+/secrets
+/temp
+/book/output
+/novafoods-fonts
+*.log
+__pycache__/
