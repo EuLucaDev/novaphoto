@@ -6,9 +6,9 @@
 
 use std::sync::OnceLock;
 
+use egui::{Color32, Rect, Response, Sense, Vec2};
 use nova_ui::buttons::{ButtonVisuals, IconButton, IconButtonStyle};
 use nova_ui::icons::{SvgIconSet, SvgStyle};
-use egui::{Color32, Rect, Response, Sense, Vec2};
 
 use crate::icon_data::ICONS;
 use crate::state::Tool;

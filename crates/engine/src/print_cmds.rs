@@ -412,9 +412,7 @@ fn render_and_spool(doc: &Document, p: &Value, cmd: &str) -> Result<Value> {
         // The last line of defence: a test or fuzz run must never print a page (`dryRun` still
         // renders and reports the command).
         if printing_disabled() {
-            return Err(other(
-                "printing is disabled in this process (novaphoto_engine::print_cmds::disable_printing or NOVAPHOTO_NO_PRINT); use dryRun: true",
-            ));
+            return Err(other("printing is disabled in this process (novaphoto_engine::print_cmds::disable_printing or NOVAPHOTO_NO_PRINT); use dryRun: true"));
         }
         spool = json!(nova_print::submit(&pdf, &job).map_err(other)?);
         sent = true;

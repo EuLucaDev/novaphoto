@@ -256,8 +256,7 @@ fn main() {
             (img, w, h)
         };
         let image =
-            novaphoto_codecs::Image::from_raw((w * 3) as u32, h as u32, novaphoto_codecs::ChannelLayout::Rgba, novaphoto_codecs::SampleType::U8, img)
-                .unwrap();
+            novaphoto_codecs::Image::from_raw((w * 3) as u32, h as u32, novaphoto_codecs::ChannelLayout::Rgba, novaphoto_codecs::SampleType::U8, img).unwrap();
         std::fs::write(&out, novaphoto_codecs::encode(&image, novaphoto_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
         println!("wrote {out}");
         return;
@@ -275,10 +274,8 @@ fn main() {
         wr(format!("{out}_ps.f32"), &merged);
         let mut meta = format!("{} {}\n", doc.size.width, doc.size.height);
         for (i, l) in doc.layers.iter().enumerate() {
-            let b = novaphoto_compose::surface_to_buffer(
-                l.surface().unwrap_or(&novaphoto_raster::Surface::new(novaphoto_color::PixelFormat::RGBA8)),
-                doc.bounds(),
-            );
+            let b =
+                novaphoto_compose::surface_to_buffer(l.surface().unwrap_or(&novaphoto_raster::Surface::new(novaphoto_color::PixelFormat::RGBA8)), doc.bounds());
             wr(format!("{out}_L{i}.f32"), &b.px);
             meta += &format!("{i} {}\n", l.name);
         }

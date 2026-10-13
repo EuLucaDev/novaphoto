@@ -98,8 +98,7 @@ fn write_clipping_indicator_preview() {
                     .input(|input| input.events.iter().find_map(|event| if let Event::Screenshot { image, .. } = event { Some(image.clone()) } else { None }))
                     .unwrap();
                 let rgba = image.pixels.iter().flat_map(|pixel| pixel.to_array()).collect();
-                let image =
-                    novaphoto_codecs::Image::from_u8(image.size[0] as u32, image.size[1] as u32, novaphoto_codecs::ChannelLayout::Rgba, rgba).unwrap();
+                let image = novaphoto_codecs::Image::from_u8(image.size[0] as u32, image.size[1] as u32, novaphoto_codecs::ChannelLayout::Rgba, rgba).unwrap();
                 let png = novaphoto_codecs::encode(&image, novaphoto_codecs::Format::Png, &Default::default()).unwrap();
                 std::fs::write(output.join(format!("{}-{width:.0}-{scale:.0}x.png", theme.id())), png).unwrap();
             }

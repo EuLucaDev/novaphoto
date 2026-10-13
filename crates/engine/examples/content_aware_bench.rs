@@ -55,8 +55,7 @@ fn open_photo(w: u32, h: u32) -> Res<Session> {
             }
         }
     });
-    let img =
-        novaphoto_codecs::Image::from_raw(w, h, novaphoto_codecs::ChannelLayout::Rgb, novaphoto_codecs::SampleType::U8, px).map_err(|e| e.to_string())?;
+    let img = novaphoto_codecs::Image::from_raw(w, h, novaphoto_codecs::ChannelLayout::Rgb, novaphoto_codecs::SampleType::U8, px).map_err(|e| e.to_string())?;
     let jpeg = novaphoto_codecs::encode(&img, novaphoto_codecs::Format::Jpeg, &Default::default()).map_err(|e| e.to_string())?;
     let doc = novaphoto_io::import("photo.jpg", &jpeg).map_err(|e| e.to_string())?.document;
     let mut s = Session::new();

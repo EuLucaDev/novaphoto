@@ -36,10 +36,10 @@ pub use effects::{
     GradientStyle, Satin, Shadow, StrokeFx, StrokePosition,
 };
 pub use mode::{ColorTable, Duotone, DuotoneInk, StackMode};
-pub use pattern::Pattern;
 pub use novaphoto_color::{BlendMode, Color, ColorMode, PixelFormat, SampleType};
 pub use novaphoto_geom::{Affine, Rect, Size};
 pub use novaphoto_raster::Surface;
+pub use pattern::Pattern;
 use serde::{Deserialize, Serialize};
 pub use slices::{Slice, SliceKind, SliceOrigin, Slices};
 pub use text_styles::TextStyles;

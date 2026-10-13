@@ -62,7 +62,7 @@ pub const PHOTOSHOP: PinnedCorpus = PinnedCorpus {
     sources_md: |c| {
         format!(
             "# Photoshop oracle corpus\n\n`photoshop/` of https://github.com/EuLucaDev/novaphoto-corpus at commit {NOVAPHOTO_CORPUS_COMMIT} \
-             (see `README.md`). MIT OR Apache-2.0, authored by the NovaPhoto contributors. Fetched and sha256-verified by \
+             (see `README.md`). MIT OR Apache-2.0, authored by the Nova Photo contributors. Fetched and sha256-verified by \
              `cargo xtask corpus --photoshop` against `{}`. Gitignored; never commit these files.\n",
             c.manifest
         )

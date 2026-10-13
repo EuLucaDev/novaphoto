@@ -443,11 +443,7 @@ fn guides_and_alpha_names_roundtrip() {
     for name in ["Spot \u{e9}", "Alpha 2"] {
         d.channels.push(novaphoto_doc::AlphaChannel::new(
             name,
-            novaphoto_raster::Surface::new(novaphoto_color::PixelFormat::new(
-                novaphoto_color::ColorMode::Grayscale,
-                novaphoto_color::SampleType::U8,
-                false,
-            )),
+            novaphoto_raster::Surface::new(novaphoto_color::PixelFormat::new(novaphoto_color::ColorMode::Grayscale, novaphoto_color::SampleType::U8, false)),
         ));
     }
     let f = document_to_psd(&d);

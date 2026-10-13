@@ -125,7 +125,7 @@ goes in `CARGO_TARGET_<TRIPLE>_RUSTFLAGS`, so host build scripts aren't affected
   (build dependency `0.1`). They only do this when targeting Windows. Elsewhere each
   script is a no-op, even if `NOVAPHOTO_REQUIRE_WINRES` is set, and the web build
   doesn't touch that crate. Both set ProductName to Nova Photo, CompanyName to
-  Learning Machines LLC and the same copyright line. The GUI description is
+  Nova Foods and the same copyright line. The GUI description is
   "Nova Photo image editor" (`novaphoto.exe`). The CLI description is
   "Nova Photo command-line interface", with OriginalFilename `novaphoto-cli.exe`
   and InternalName `novaphoto-cli`. Version strings are the Cargo package version,
@@ -302,7 +302,7 @@ the run shows a `::warning::`.
 
 | Secret | Used for |
 |---|---|
-| `APPLE_CERTIFICATE` | base64 `.p12` with "Developer ID Application: Learning Machines LLC (DJ6XS33FX8)" |
+| `APPLE_CERTIFICATE` | base64 `.p12` with "Developer ID Application: Nova Foods (DJ6XS33FX8)" |
 | `APPLE_CERTIFICATE_PASSWORD` | password for that `.p12` |
 | `KEYCHAIN_PASSWORD` | password for the temporary CI keychain (random if unset) |
 | `APPLE_ID` | Apple ID used by `notarytool` |

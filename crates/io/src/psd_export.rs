@@ -776,10 +776,7 @@ impl Ex {
             blocks::PlldWarp::None => None,
             blocks::PlldWarp::Warp(w) => Some(w),
         };
-        if sm.source != (novaphoto_doc::SmartSource::Linked { path: id.clone() })
-            || sm.warp != warp
-            || !sm.smart_filters.is_empty()
-            || sm.filter_mask.is_some()
+        if sm.source != (novaphoto_doc::SmartSource::Linked { path: id.clone() }) || sm.warp != warp || !sm.smart_filters.is_empty() || sm.filter_mask.is_some()
         {
             return true;
         }
@@ -930,8 +927,7 @@ impl Ex {
             (format!("{stem}.psb"), data, size, f64::from(doc.resolution_dpi), Some(doc))
         } else {
             // Formats we can't decode (vector PDF/AI…) are still embedded; their size comes from the layer.
-            let (size, dpi) =
-                crate::linked::source_geometry(file_name, bytes, &novaphoto_raster::Interrupt::NONE).unwrap_or(((0.0, 0.0), f64::from(self.dpi)));
+            let (size, dpi) = crate::linked::source_geometry(file_name, bytes, &novaphoto_raster::Interrupt::NONE).unwrap_or(((0.0, 0.0), f64::from(self.dpi)));
             (file_name.to_string(), bytes.to_vec(), size, dpi, None)
         };
         let uuid = contents_uuid(contents_id, &data);
@@ -953,8 +949,7 @@ impl Ex {
             return c.surface.clone();
         }
         if self.cmyk
-            && let Some(s) =
-                novaphoto_compose::gradient_fill::render_cmyk_fill(f, self.canvas, novaphoto_compose::fill_frame(l, self.canvas), self.fmt.sample)
+            && let Some(s) = novaphoto_compose::gradient_fill::render_cmyk_fill(f, self.canvas, novaphoto_compose::fill_frame(l, self.canvas), self.fmt.sample)
         {
             return s;
         }

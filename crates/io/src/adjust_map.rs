@@ -695,8 +695,7 @@ pub fn write(adj: &Adjustment) -> Vec<([u8; 4], Vec<u8>)> {
                 ),
                 _ => (novaphoto_cms::lutfile::LutFile { title: String::new(), ..novaphoto_cms::lutfile::LutFile::identity(2) }, false),
             };
-            let en =
-                |t: &str, val: &str| Value::Enumerated { type_id: novaphoto_psd::descriptor::Id::new(t), value: novaphoto_psd::descriptor::Id::new(val) };
+            let en = |t: &str, val: &str| Value::Enumerated { type_id: novaphoto_psd::descriptor::Id::new(t), value: novaphoto_psd::descriptor::Id::new(val) };
             let text = |t: &str| Value::Text(novaphoto_psd::descriptor::UnicodeString::new_nul(t));
             let d = Descriptor::new("null")
                 .with("lookupType", en("colorLookupType", "3DLUT"))

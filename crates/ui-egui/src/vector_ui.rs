@@ -1995,8 +1995,7 @@ mod tests {
         let mut app = app();
         app.ui.tool_options.corner_radius = 8.0;
         let preview = |app: &NovaphotoApp, tool, end| {
-            shape_geometry(&app.ui.tool_options, tool, [10.0, 10.0], end, egui::Modifiers::ALT)
-                .and_then(|p| novaphoto_engine::vector_cmds::shape_path(&p).ok())
+            shape_geometry(&app.ui.tool_options, tool, [10.0, 10.0], end, egui::Modifiers::ALT).and_then(|p| novaphoto_engine::vector_cmds::shape_path(&p).ok())
         };
         for tool in [Tool::Rectangle, Tool::EllipseShape, Tool::Triangle, Tool::Polygon, Tool::Line] {
             let shown = preview(&app, tool, [60.0, 30.0]).unwrap();

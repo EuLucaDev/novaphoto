@@ -15,7 +15,7 @@ fn main() {
     res.set_icon("../../assets/app-icon/novaphoto.ico")
         .set("ProductName", "Nova Photo")
         .set("FileDescription", "Nova Photo image editor")
-        .set("CompanyName", "Learning Machines LLC")
+        .set("CompanyName", "Nova Foods")
         .set("LegalCopyright", "Copyright (c) the Nova Photo authors. MIT OR Apache-2.0.")
         .set("OriginalFilename", "novaphoto.exe")
         .set("InternalName", "novaphoto");

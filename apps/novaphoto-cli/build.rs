@@ -19,7 +19,7 @@ fn main() -> std::io::Result<()> {
     res.set_icon("../../assets/app-icon/novaphoto.ico")
         .set("ProductName", "Nova Photo")
         .set("FileDescription", "Nova Photo command-line interface")
-        .set("CompanyName", "Learning Machines LLC")
+        .set("CompanyName", "Nova Foods")
         .set("LegalCopyright", "Copyright (c) the Nova Photo authors. MIT OR Apache-2.0.")
         .set("OriginalFilename", "novaphoto-cli.exe")
         .set("InternalName", "novaphoto-cli");

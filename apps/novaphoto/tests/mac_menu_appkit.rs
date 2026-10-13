@@ -14,12 +14,12 @@ mod mac_menu;
 
 #[cfg(target_os = "macos")]
 fn main() {
+    use novaphoto_ui_egui::NovaphotoApp;
+    use novaphoto_ui_egui::native_menu;
     use objc2::MainThreadMarker;
     use objc2::rc::Retained;
     use objc2_app_kit::{NSApplication, NSEvent, NSEventMask, NSEventModifierFlags, NSEventSubtype, NSEventType, NSMenu};
     use objc2_foundation::{NSPoint, NSString};
-    use novaphoto_ui_egui::NovaphotoApp;
-    use novaphoto_ui_egui::native_menu;
     use serde_json::json;
 
     let mtm = MainThreadMarker::new().expect("harness = false runs on the main thread");

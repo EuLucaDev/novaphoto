@@ -1627,8 +1627,7 @@ mod tests {
         let mut app = NovaphotoApp::new(novaphoto_engine::Session::new(), Default::default());
         let mut layer = novaphoto_doc::Layer::new("L", novaphoto_doc::LayerContent::Adjustment(novaphoto_doc::Adjustment::Invert));
         layer.advanced.knockout = novaphoto_doc::Knockout::Deep;
-        for mode in
-            [novaphoto_color::ColorMode::Rgb, novaphoto_color::ColorMode::Cmyk, novaphoto_color::ColorMode::Lab, novaphoto_color::ColorMode::Grayscale]
+        for mode in [novaphoto_color::ColorMode::Rgb, novaphoto_color::ColorMode::Cmyk, novaphoto_color::ColorMode::Lab, novaphoto_color::ColorMode::Grayscale]
         {
             let mut f = initial_fields(&layer, Some(BLENDING), 120.0);
             set_blending_fields(&mut f, &layer, mode);

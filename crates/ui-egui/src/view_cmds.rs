@@ -1424,12 +1424,7 @@ fn save_a_copy(app: &mut NovaphotoApp) -> Result<Value, String> {
 
 /// Writes `doc` to `path` as a copy (Save a Copy, and its replayed action step): the document's
 /// path and saved state are untouched. `tga_bits` is the Targa answer, when there is one.
-pub(crate) fn write_copy(
-    app: &mut NovaphotoApp,
-    doc: &novaphoto_doc::Document,
-    path: &str,
-    tga_bits: Option<novaphoto_io::TgaBits>,
-) -> Result<Value, String> {
+pub(crate) fn write_copy(app: &mut NovaphotoApp, doc: &novaphoto_doc::Document, path: &str, tga_bits: Option<novaphoto_io::TgaBits>) -> Result<Value, String> {
     let settings = crate::ExportSettings { tga_bits, ..app.save_settings() };
     let export = app.services.export.as_ref().ok_or("no exporter configured")?;
     let (bytes, warnings) = export(doc, path, &settings)?;

@@ -8,7 +8,7 @@ use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::corpus_pins::{
-    self, AG_PSD_COMMIT, HEIC_RS_COMMIT, OPENEXR_COMMIT, NOVAPHOTO_CORPUS_COMMIT, PILLOW_HEIF_COMMIT, PNGSUITE_SHA256, PNGSUITE_URL, PSD_TOOLS_COMMIT,
+    self, AG_PSD_COMMIT, HEIC_RS_COMMIT, NOVAPHOTO_CORPUS_COMMIT, OPENEXR_COMMIT, PILLOW_HEIF_COMMIT, PNGSUITE_SHA256, PNGSUITE_URL, PSD_TOOLS_COMMIT,
 };
 use crate::pinned::{PinnedCorpus, USER_AGENT};
 use crate::{cargo, root, run};
@@ -89,9 +89,9 @@ fn local_clone() -> Result<PathBuf, String> {
         return Ok(PathBuf::from(p));
     }
     let sibling = root().parent().map(|p| p.join("novaphoto-corpus"));
-    sibling.filter(|s| s.join("photoshop").is_dir()).ok_or_else(|| {
-        "no local novaphoto-corpus clone: expected ../novaphoto-corpus next to this checkout, or set NOVAPHOTO_CORPUS_REPO=<path>".to_string()
-    })
+    sibling
+        .filter(|s| s.join("photoshop").is_dir())
+        .ok_or_else(|| "no local novaphoto-corpus clone: expected ../novaphoto-corpus next to this checkout, or set NOVAPHOTO_CORPUS_REPO=<path>".to_string())
 }
 
 /// Fetches every corpus that is missing or stale (verified ones are left alone). With `local`,
