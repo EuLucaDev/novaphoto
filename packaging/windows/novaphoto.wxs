@@ -18,13 +18,13 @@
      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <Package
       Name="NovaPhoto"
-      Manufacturer="Learning Machines LLC"
+      Manufacturer="Nova Foods"
       Version="$(var.Version)"
-      UpgradeCode="D9660F32-2D0A-4ABE-B73D-17BE25F1542C"
+      UpgradeCode="E1D9521C-0403-5563-976E-5DDEBB411E0C"
       Scope="perMachine"
       Compressed="yes"
       Language="1033">
-    <SummaryInformation Description="NovaPhoto image editor" Manufacturer="Learning Machines LLC" />
+    <SummaryInformation Description="NovaPhoto image editor" Manufacturer="Nova Foods" />
     <!-- Same-version upgrades let successive pre-releases of one X.Y.Z replace each other
          (MSI versions are numeric, so 1.2.3-rc.1 and 1.2.3-rc.2 are both 1.2.3). -->
     <MajorUpgrade AllowSameVersionUpgrades="yes"
@@ -81,7 +81,7 @@
 
   <Fragment>
     <ComponentGroup Id="NovaphotoFiles" Directory="INSTALLFOLDER">
-      <Component Id="NovaphotoApp" Guid="A6DE41B7-A80F-4C59-A17E-BB68065BF67E">
+      <Component Id="NovaphotoApp" Guid="49139102-F6CD-509C-860A-515C1D798E11">
         <File Id="NovaphotoExe" Source="$(var.BinDir)\novaphoto.exe" KeyPath="yes">
           <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="NovaPhoto"
               Description="NovaPhoto image editor" WorkingDirectory="INSTALLFOLDER" Advertise="yes"
@@ -150,6 +150,9 @@
 
       <Component Id="NovaphotoCli">
         <File Id="NovaphotoCliExe" Source="$(var.BinDir)\novaphoto-cli.exe" KeyPath="yes" />
+      </Component>
+      <Component Id="NovaFoodsLegalNotice">
+        <File Id="NovaFoodsLegalNoticeFile" Source="$(sys.SOURCEFILEDIR)..\..\NOTICE" KeyPath="yes" />
       </Component>
     </ComponentGroup>
   </Fragment>
