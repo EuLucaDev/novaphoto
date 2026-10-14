@@ -39,7 +39,7 @@ novaphoto-testkit = { path = "crates/testkit" }
 novaphoto-tablet = { path = "crates/tablet" }
 
 # external
-nova-print = { path = "vendor/novafoods-libs-d991bf6792/crates/print" }
+nova-print = { path = "vendor/novafoods-libs-3d37da389a/crates/print" }
 thiserror = "2"
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"

@@ -8,6 +8,7 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+nova-print = { workspace = true }
 nova-ui = { workspace = true }
 novaphoto-geom = { workspace = true }
 novaphoto-color = { workspace = true }

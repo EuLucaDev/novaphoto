@@ -508,7 +508,10 @@ pub fn merged_composite(file: &PsdFile) -> Result<Vec<[f32; 4]>, IoError> {
     }
     let l = doc.layers.first().ok_or_else(|| IoError::Unsupported("no merged image".into()))?;
     let s = l.surface().ok_or_else(|| IoError::Unsupported("no merged image".into()))?;
-    Ok(novaphoto_compose::surface_to_buffer(s, doc.bounds()).px)
+    // CMYK reads through the file's own profile, as the compositor reads its layers, so a tagged
+    // file's merged image and its composite are compared in the same colours.
+    let cmyk = novaphoto_compose::cmyk_space(&doc);
+    Ok(novaphoto_color::convert::with_cmyk_space(cmyk.as_ref(), || novaphoto_compose::surface_to_buffer(s, doc.bounds()).px))
 }
 
 #[cfg(test)]
