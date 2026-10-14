@@ -29,10 +29,7 @@ impl LiveUi {
 }
 
 fn my_name() -> String {
-    std::env::var("NOVA_FOODS_NAME")
-        .or_else(|_| std::env::var("USER"))
-        .or_else(|_| std::env::var("USERNAME"))
-        .unwrap_or_else(|_| "Nova Foods".into())
+    std::env::var("NOVA_FOODS_NAME").or_else(|_| std::env::var("USER")).or_else(|_| std::env::var("USERNAME")).unwrap_or_else(|_| "Nova Foods".into())
 }
 
 fn toast(app: &mut NovaphotoApp, msg: impl Into<String>) {
@@ -71,8 +68,11 @@ pub fn join(app: &mut NovaphotoApp, text: &str) {
         app.live.error = Some(format!("Este convite é de outro app ({}). Abra-o no app certo pelo Nova Foods Launcher.", invite.app));
         return;
     }
-    
-    if let Err(e) = app.session.execute("file.new", serde_json::json!({"width": 64, "height": 64})) { app.live.error = Some(e.to_string()); return; }
+
+    if let Err(e) = app.session.execute("file.new", serde_json::json!({"width": 64, "height": 64})) {
+        app.live.error = Some(e.to_string());
+        return;
+    }
     if app.session.live_start().is_err() {
         app.live.error = Some("Não foi possível preparar o documento compartilhado.".into());
         return;
@@ -138,7 +138,9 @@ pub fn pump(app: &mut NovaphotoApp, ctx: &Context) {
         app.live.open = true;
         join(app, &text);
     }
-    if app.live.live.is_some() && app.session.live_active() { app.live.document_ready = true; }
+    if app.live.live.is_some() && app.session.live_active() {
+        app.live.document_ready = true;
+    }
     if app.live.document_ready && !app.session.live_active() {
         stop(app);
         app.live.error = Some("A colaboração terminou porque o arquivo compartilhado foi fechado ou substituído.".into());
@@ -255,6 +257,5 @@ pub fn is_invite_arg(arg: &str) -> bool {
 }
 
 pub fn launch_invite() -> Option<String> {
-    std::env::args_os().skip(1).filter_map(|arg| arg.into_string().ok())
-        .find(|arg| arg != "--join" && is_invite_arg(arg))
+    std::env::args_os().skip(1).filter_map(|arg| arg.into_string().ok()).find(|arg| arg != "--join" && is_invite_arg(arg))
 }

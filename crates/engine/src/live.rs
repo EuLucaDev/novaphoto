@@ -124,7 +124,9 @@ impl Session {
 
     /// Roda o comando de um colega com a camada dele; desfazer e camadas locais ficam como estavam.
     pub fn live_apply(&mut self, cmd: &str, params: &Value, ctx: &Value) -> Result<()> {
-        if !remote_command_allowed(cmd) { return Err(err("comando não permitido na colaboração")); }
+        if !remote_command_allowed(cmd) {
+            return Err(err("comando não permitido na colaboração"));
+        }
         let i = self.live_index()?;
         let prev = self.active_index();
         self.set_active(i);
