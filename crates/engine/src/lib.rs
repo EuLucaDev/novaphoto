@@ -68,6 +68,7 @@ pub mod layer_nav_cmds;
 pub mod layer_style;
 pub mod lens_cmds;
 pub mod link_watch;
+pub mod live;
 pub mod magnetic_cmds;
 pub mod mask_view_cmds;
 mod migrate_cmds;
@@ -367,6 +368,8 @@ impl Default for ToolState {
 
 #[derive(Default)]
 pub struct Session {
+    /// Colaboração em tempo real (Nova Live), ver `live`.
+    pub live: live::LiveState,
     docs: Vec<DocState>,
     active: Option<usize>,
     pub tools: ToolState,

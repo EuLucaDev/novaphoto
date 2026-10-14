@@ -189,7 +189,7 @@ fn main() -> eframe::Result {
     let mut unreadable_paths: Vec<String> = Vec::new();
     let mut safe_gpu = false;
     let mut in_window_menus = std::env::var_os("NOVAPHOTO_IN_WINDOW_MENUS").is_some_and(|v| !v.is_empty() && v != "0");
-    let mut args = std::env::args_os().skip(1);
+    let mut args = std::env::args_os().skip(1).filter(|arg| !arg.to_str().is_some_and(novaphoto_ui_egui::live_ui::is_invite_arg));
     while let Some(a) = args.next() {
         match a.to_str() {
             Some("--control") => match args.next() {
@@ -386,6 +386,7 @@ fn main() -> eframe::Result {
                 }
             }
             let mut app = NovaphotoApp::new(Session::new(), services);
+            app.live.pending_join = novaphoto_ui_egui::live_ui::launch_invite();
             app.integrated_titlebar = cfg!(target_os = "macos");
             app.custom_titlebar = custom_titlebar;
             // Only the title bar's free gap drags the window, never the menus (mac_window.rs).
@@ -554,7 +555,7 @@ fn main() -> eframe::Result {
         }
         if let Ok(exe) = std::env::current_exe() {
             let launched = std::process::Command::new(exe)
-                .args(std::env::args_os().skip(1))
+                .args(std::env::args_os().skip(1).filter(|arg| !arg.to_str().is_some_and(novaphoto_ui_egui::live_ui::is_invite_arg)))
                 .arg("--safe-gpu")
                 .env_remove("WGPU_BACKEND")
                 .env("NOVAPHOTO_GPU_STARTUP_FAILURE", &reason)

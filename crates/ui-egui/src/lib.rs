@@ -117,6 +117,8 @@ pub mod layer_tree_ui;
 mod layout_keys;
 pub mod links;
 pub mod liquify_ui;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod live_ui;
 pub mod magnetic_lasso_ui;
 mod mask_props_ui;
 pub mod mask_thumbs_ui;
@@ -491,6 +493,8 @@ pub(crate) type HistJob = (DocId, u64, std::sync::mpsc::Receiver<(DocId, f64, st
 type InfoSampleKey = (i32, i32, u64, u32);
 
 pub struct NovaphotoApp {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub live: live_ui::LiveUi,
     pub session: Session,
     pub ui: UiState,
     pub services: Services,
@@ -749,6 +753,8 @@ pub struct NovaphotoApp {
 impl NovaphotoApp {
     pub fn new(session: Session, services: Services) -> Self {
         let mut app = Self {
+            #[cfg(not(target_arch = "wasm32"))]
+            live: live_ui::LiveUi::default(),
             session,
             ui: UiState::default(),
             services,
@@ -1758,6 +1764,12 @@ impl eframe::App for NovaphotoApp {
 
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            live_ui::pump(self, &ctx);
+            live_ui::bar(self, ui);
+            live_ui::window(self, &ctx);
+        }
         self.hover_layer = None;
         i18n::set_current(i18n::Lang::from_pref(&self.session.prefs().interface.language));
         // Fonts registered via set_fonts only take effect next frame; named families would panic now.

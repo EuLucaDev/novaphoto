@@ -608,6 +608,23 @@ impl Session {
 
     /// Run the command `id`: inline, or (with `background`) as a job when it is one.
     pub(crate) fn dispatch(&mut self, id: &str, params: Value, background: bool) -> Result<Started> {
+        // Colaboração: só o comando de fora é replicado, com a camada de quem editou.
+        self.live.depth += 1;
+        let ctx = (self.live.depth == 1 && self.active().is_some_and(|d| Some(d.doc.id) == self.live.doc))
+            .then(|| self.active().map(|d| (crate::live::context(&d.doc, d.active_layer, &d.selected_layers), crate::live::encode(&d.doc, &params))))
+            .flatten();
+        let journal = crate::commands::find(id).is_some_and(|s| s.journal);
+        let r = self.dispatch_inner(id, params, background);
+        self.live.depth -= 1;
+        if let Some((ctx, p)) = ctx
+            && r.is_ok()
+        {
+            self.live_record(id, &p, journal, ctx);
+        }
+        r
+    }
+
+    fn dispatch_inner(&mut self, id: &str, params: Value, background: bool) -> Result<Started> {
         let spec = crate::commands::find(id).ok_or_else(|| EngineError::UnknownCommand(id.to_string()))?;
         // Params are named fields: anything but an object (or null, meaning none) is a caller
         // mistake, not "use every default".
