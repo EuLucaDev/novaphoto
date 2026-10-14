@@ -3,7 +3,7 @@
 //! below and verifies each file against the `xtask/*.sha256` manifests. The CI corpus job's cache
 //! key hashes this file and the manifests, so changing a pin is the only thing that refetches.
 //!
-//! - Our own oracles: https://github.com/EuLucaDev/novaphoto-corpus (README, AGENTS.md).
+//! - Our own oracles: https://github.com/storytold/photocraft-corpus (README, AGENTS.md).
 //! - Third-party sets come from their upstreams (licences in ATTRIBUTION.md).
 //!
 //! Moving a pin: change the commit, run `cargo xtask corpus --<name> --update-manifest`, review the
@@ -11,7 +11,7 @@
 
 use crate::pinned::{PinnedCorpus, Upstream};
 
-/// https://github.com/EuLucaDev/novaphoto-corpus: our Photoshop-authored oracle PSDs
+/// https://github.com/storytold/photocraft-corpus: our Photoshop-authored oracle PSDs
 /// (`photoshop/`). Bump through a PR after committing there.
 pub const NOVAPHOTO_CORPUS_COMMIT: &str = "f5b1178cab15309e05b7b504545df3c701f6d8fd";
 /// https://github.com/psd-tools/psd-tools (MIT): `tests/psd_files` (main, 2026-10-05).
@@ -51,7 +51,8 @@ pub const PHOTOSHOP: PinnedCorpus = PinnedCorpus {
     dest: "photoshop",
     upstreams: &[Upstream {
         prefix: "",
-        repo: "EuLucaDev/novaphoto-corpus",
+        // Arquivos de teste do projeto original (público), baixados só no CI; não vão no app.
+        repo: "storytold/photocraft-corpus",
         commit: NOVAPHOTO_CORPUS_COMMIT,
         subdir: "photoshop",
         extras: &[("README.md", "README.md"), ("LICENSE-MIT", "LICENSE-MIT"), ("LICENSE-APACHE", "LICENSE-APACHE")],
@@ -61,7 +62,7 @@ pub const PHOTOSHOP: PinnedCorpus = PinnedCorpus {
     subset: false,
     sources_md: |c| {
         format!(
-            "# Photoshop oracle corpus\n\n`photoshop/` of https://github.com/EuLucaDev/novaphoto-corpus at commit {NOVAPHOTO_CORPUS_COMMIT} \
+            "# Photoshop oracle corpus\n\n`photoshop/` of https://github.com/storytold/photocraft-corpus at commit {NOVAPHOTO_CORPUS_COMMIT} \
              (see `README.md`). MIT OR Apache-2.0, authored by the Nova Photo contributors. Fetched and sha256-verified by \
              `cargo xtask corpus --photoshop` against `{}`. Gitignored; never commit these files.\n",
             c.manifest

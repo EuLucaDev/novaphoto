@@ -51,6 +51,14 @@ fn remote_command_allowed(cmd: &str) -> bool {
     matches!(cmd, "layer.new.layer" | "edit.fill")
 }
 
+/// O desfazer guarda fotos da imagem: depois de uma alteração de colega, desfazer o passo
+/// anterior apagaria o trabalho dele. O histórico local recomeça daqui (mesmos limites).
+fn fresh_history(st: &mut crate::DocState) {
+    let mut h = novaphoto_ops::History::new(st.history.max_states);
+    h.max_bytes = st.history.max_bytes;
+    st.history = h;
+}
+
 impl Session {
     fn live_index(&self) -> Result<usize> {
         let id = self.live.doc.ok_or_else(|| err("nenhuma sessão"))?;
@@ -112,6 +120,7 @@ impl Session {
         let st = self.active_mut().ok_or_else(|| err("sem imagem"))?;
         st.doc = Arc::new(doc);
         st.revision += 1;
+        fresh_history(st);
         keep_valid(st);
         let rev = st.revision;
         self.live.seen = rev;
@@ -130,9 +139,9 @@ impl Session {
         let i = self.live_index()?;
         let prev = self.active_index();
         self.set_active(i);
-        let (local_active, local_selected, history, doc) = {
+        let (local_active, local_selected, doc) = {
             let d = self.active().ok_or_else(|| err("sem imagem"))?;
-            (d.active_layer, d.selected_layers.clone(), d.history.clone(), d.doc.clone())
+            (d.active_layer, d.selected_layers.clone(), d.doc.clone())
         };
         // Camadas chegam pela posição na pilha (os ids internos são de cada computador).
         let params = decode(&doc, params);
@@ -148,7 +157,7 @@ impl Session {
         let r = self.execute(cmd, params);
         self.live.applying = false;
         if let Some(st) = self.active_mut() {
-            st.history = history;
+            fresh_history(st);
             st.active_layer = local_active;
             st.selected_layers = local_selected;
             keep_valid(st);

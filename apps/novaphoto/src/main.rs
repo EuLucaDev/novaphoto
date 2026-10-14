@@ -165,6 +165,8 @@ mod control_port_tests {
 }
 
 fn main() -> eframe::Result {
+    #[cfg(not(target_arch = "wasm32"))]
+    novaphoto_ui_egui::live_ui::install_link_handler();
     // First, so the panic hook and every start-up warning are recorded (`logging`).
     let logger = logging::install();
     crash_guard::install_hook();

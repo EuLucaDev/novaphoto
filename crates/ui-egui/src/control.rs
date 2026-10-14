@@ -357,6 +357,13 @@ fn modifiers_from(p: &Value) -> egui::Modifiers {
 const SHELL_DIALOG: &str = "shell";
 
 pub fn handle(app: &mut NovaphotoApp, ctx: &egui::Context, req: &ControlRequest) -> Outcome {
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Some(r) = crate::live_ui::control(app, req.method.as_str(), &req.params) {
+        return match r {
+            Ok(v) => ok(v),
+            Err(e) => err(e),
+        };
+    }
     let saved = app.session.authorize;
     if let Some(gate) = app.services.automation_authorize {
         app.session.authorize = Some(gate);
