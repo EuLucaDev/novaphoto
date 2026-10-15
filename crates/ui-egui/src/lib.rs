@@ -14,6 +14,9 @@ macro_rules! tl {
     };
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+pub use nova_account_ui as account_ui;
+
 pub mod actions;
 pub mod adjust_dialog;
 pub mod adjust_editors;
@@ -1798,6 +1801,10 @@ impl eframe::App for NovaphotoApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+        #[cfg(not(target_arch = "wasm32"))]
+        if !crate::account_ui::gate(ui, "novaphoto") {
+            return;
+        }
         let ctx = ui.ctx().clone();
         #[cfg(not(target_arch = "wasm32"))]
         {
