@@ -3887,7 +3887,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "arboard",
  "async-io",
@@ -3931,7 +3931,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-affinity"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -3941,7 +3941,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-algo"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "novaphoto-color",
  "novaphoto-geom",
@@ -3954,7 +3954,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-automation"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "base64 0.22.1",
  "cap-std",
@@ -3976,7 +3976,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-cli"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "novaphoto-automation",
  "novaphoto-codecs",
@@ -3990,7 +3990,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-cms"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "moxcms",
  "rayon",
@@ -3998,7 +3998,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-codecs"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "exr",
  "flate2",
@@ -4019,7 +4019,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-color"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "novaphoto-cms",
  "serde",
@@ -4027,7 +4027,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-compose"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "criterion",
  "novaphoto-color",
@@ -4042,7 +4042,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-doc"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "novaphoto-color",
  "novaphoto-geom",
@@ -4053,7 +4053,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-engine"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "blake3",
  "exr",
@@ -4088,7 +4088,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-format"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "blake3",
  "crc32fast",
@@ -4109,14 +4109,14 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-geom"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "novaphoto-gpu"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "half",
  "log",
@@ -4133,14 +4133,14 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-heif"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "heic-rs",
 ]
 
 [[package]]
 name = "novaphoto-io"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "blake3",
  "crc32fast",
@@ -4169,14 +4169,14 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-ops"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "novaphoto-doc",
 ]
 
 [[package]]
 name = "novaphoto-paint"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "novaphoto-color",
  "novaphoto-geom",
@@ -4187,7 +4187,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-plugins"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "novaphoto-color",
  "novaphoto-geom",
@@ -4202,7 +4202,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-psd"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "flate2",
  "novaphoto-psd",
@@ -4213,7 +4213,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-raster"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "novaphoto-color",
  "novaphoto-geom",
@@ -4223,7 +4223,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-raw"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "flate2",
  "image",
@@ -4238,7 +4238,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-tablet"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "block2 0.6.2",
  "objc2 0.6.4",
@@ -4250,7 +4250,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-testkit"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "memory-stats",
  "novaphoto-color",
@@ -4261,7 +4261,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-text"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "flate2",
  "novaphoto-color",
@@ -4275,7 +4275,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-ui-egui"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "base64 0.22.1",
  "eframe",
@@ -4317,7 +4317,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-vector"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "novaphoto-color",
  "novaphoto-doc",
@@ -4328,7 +4328,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-web"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "eframe",
  "egui",
@@ -8761,7 +8761,7 @@ checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "xtask"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "serde",
  "serde_json",
