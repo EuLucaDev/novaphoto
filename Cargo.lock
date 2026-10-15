@@ -3879,7 +3879,7 @@ checksum = "0676bb32a98c1a483ce53e500a81ad9c3d5b3f7c920c28c24e9cb0980d0b5bc8"
 [[package]]
 name = "nova-account-ui"
 version = "0.1.0"
-source = "git+https://github.com/EuLucaDev/nova-live?rev=25720ad8a7aa8cc6e10ffd13091bd69873d9fd95#25720ad8a7aa8cc6e10ffd13091bd69873d9fd95"
+source = "git+https://github.com/EuLucaDev/nova-live?rev=d0c50673eb1b525c3efbfda72e33bdeb4569e1e7#d0c50673eb1b525c3efbfda72e33bdeb4569e1e7"
 dependencies = [
  "egui",
  "image",
@@ -3889,7 +3889,7 @@ dependencies = [
 [[package]]
 name = "nova-live"
 version = "0.1.0"
-source = "git+https://github.com/EuLucaDev/nova-live?rev=25720ad8a7aa8cc6e10ffd13091bd69873d9fd95#25720ad8a7aa8cc6e10ffd13091bd69873d9fd95"
+source = "git+https://github.com/EuLucaDev/nova-live?rev=d0c50673eb1b525c3efbfda72e33bdeb4569e1e7#d0c50673eb1b525c3efbfda72e33bdeb4569e1e7"
 dependencies = [
  "base64 0.22.1",
  "getrandom 0.4.3",
@@ -3906,7 +3906,7 @@ dependencies = [
 [[package]]
 name = "nova-live-macos"
 version = "0.1.0"
-source = "git+https://github.com/EuLucaDev/nova-live?rev=25720ad8a7aa8cc6e10ffd13091bd69873d9fd95#25720ad8a7aa8cc6e10ffd13091bd69873d9fd95"
+source = "git+https://github.com/EuLucaDev/nova-live?rev=d0c50673eb1b525c3efbfda72e33bdeb4569e1e7#d0c50673eb1b525c3efbfda72e33bdeb4569e1e7"
 dependencies = [
  "objc2 0.6.4",
  "objc2-foundation 0.3.2",
@@ -3934,7 +3934,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "arboard",
  "async-io",
@@ -3978,7 +3978,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-affinity"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -3988,7 +3988,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-algo"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "novaphoto-color",
  "novaphoto-geom",
@@ -4001,7 +4001,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-automation"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "base64 0.22.1",
  "cap-std",
@@ -4023,7 +4023,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-cli"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "novaphoto-automation",
  "novaphoto-codecs",
@@ -4037,7 +4037,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-cms"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "moxcms",
  "rayon",
@@ -4045,7 +4045,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-codecs"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "exr",
  "flate2",
@@ -4066,7 +4066,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-color"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "novaphoto-cms",
  "serde",
@@ -4074,7 +4074,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-compose"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "criterion",
  "novaphoto-color",
@@ -4089,7 +4089,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-doc"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "novaphoto-color",
  "novaphoto-geom",
@@ -4100,7 +4100,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-engine"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "blake3",
  "exr",
@@ -4135,7 +4135,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-format"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "blake3",
  "crc32fast",
@@ -4156,14 +4156,14 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-geom"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "novaphoto-gpu"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "half",
  "log",
@@ -4180,14 +4180,14 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-heif"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "heic-rs",
 ]
 
 [[package]]
 name = "novaphoto-io"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "blake3",
  "crc32fast",
@@ -4216,14 +4216,14 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-ops"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "novaphoto-doc",
 ]
 
 [[package]]
 name = "novaphoto-paint"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "novaphoto-color",
  "novaphoto-geom",
@@ -4234,7 +4234,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-plugins"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "novaphoto-color",
  "novaphoto-geom",
@@ -4249,7 +4249,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-psd"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "flate2",
  "novaphoto-psd",
@@ -4260,7 +4260,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-raster"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "novaphoto-color",
  "novaphoto-geom",
@@ -4270,7 +4270,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-raw"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "flate2",
  "image",
@@ -4285,7 +4285,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-tablet"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "block2 0.6.2",
  "objc2 0.6.4",
@@ -4297,7 +4297,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-testkit"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "memory-stats",
  "novaphoto-color",
@@ -4308,7 +4308,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-text"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "flate2",
  "novaphoto-color",
@@ -4322,7 +4322,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-ui-egui"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "base64 0.22.1",
  "eframe",
@@ -4365,7 +4365,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-vector"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "novaphoto-color",
  "novaphoto-doc",
@@ -4376,7 +4376,7 @@ dependencies = [
 
 [[package]]
 name = "novaphoto-web"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "eframe",
  "egui",
@@ -8889,7 +8889,7 @@ checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "xtask"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "serde",
  "serde_json",
