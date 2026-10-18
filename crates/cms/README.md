@@ -1,6 +1,6 @@
 # novaphoto-cms
 
-Pure-Rust ICC colour management for Novaphoto. No workspace dependencies (L0, publishable),
+Pure-Rust ICC colour management for Nova Photo. No workspace dependencies (L0, publishable),
 no C, no `unsafe`. Implemented from the public ICC.1:2010 (v4.3) and ICC.1:2001-04 (v2)
 specifications, CIE 15, and Adobe's published black point compensation paper.
 
@@ -59,7 +59,7 @@ t.eval(&[1.0, 0.0, 0.0], &mut out);                        // exact single colou
 
 Adobe's CMYK profiles (U.S. Web Coated SWOP, Coated FOGRA39) are proprietary, and the freely
 downloadable characterisation-based profiles (ECI/FOGRA, colord, Ghostscript) carry
-redistribution conditions or unclear licences, so Novaphoto generates its own
+redistribution conditions or unclear licences, so Nova Photo generates its own
 (`src/synth.rs`): a Yule–Nielsen modified Neugebauer model (n = 2) over the 16 overprints with
 ISO 12647-2 coated-paper Lab aims for paper/C/M/Y/RGB overprints, parabolic dot gain (14 % CMY,
 17 % K at 50 %), GCR black generation (starts at 20 % gray component, K max 95 %), total ink

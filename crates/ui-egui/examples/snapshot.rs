@@ -1,4 +1,4 @@
-//! Render the full Novaphoto UI offscreen (no window, no focus stealing) and save a PNG.
+//! Render the full Nova Photo UI offscreen (no window, no focus stealing) and save a PNG.
 //!
 //! ```sh
 //! cargo run --release -p novaphoto-ui-egui --example snapshot -- \

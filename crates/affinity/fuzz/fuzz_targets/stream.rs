@@ -7,5 +7,5 @@ use libfuzzer_sys::fuzz_target;
 fuzz_target!(|stream: &[u8]| {
     let _ = novaphoto_affinity::stream::parse(stream);
     let file = novaphoto_affinity::synth::container(&[("doc.dat", stream, novaphoto_affinity::synth::Method::Stored)], None);
-    let _ = novaphoto_affinity::read(&file, novaphoto_affinity::Limits { max_entry: 16 << 20, max_total: 64 << 20 });
+    let _ = novaphoto_affinity::read(&file, novaphoto_affinity::Limits { max_entry: 16 << 20, max_total: 64 << 20, max_pixel_bytes: 64 << 20 });
 });

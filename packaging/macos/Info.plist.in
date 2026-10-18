@@ -71,7 +71,7 @@
   <key>NSHumanReadableCopyright</key>
   <string>Copyright © the NovaPhoto authors. MIT OR Apache-2.0.</string>
 
-  <!-- Novaphoto's own format. -->
+  <!-- NovaPhoto's own format. -->
   <key>UTExportedTypeDeclarations</key>
   <array>
     <dict>

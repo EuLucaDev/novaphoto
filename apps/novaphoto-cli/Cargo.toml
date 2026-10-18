@@ -1,6 +1,6 @@
 [package]
 name = "novaphoto-cli"
-description = "Headless Novaphoto: convert, inspect, run commands, batch, MCP server"
+description = "Headless NovaPhoto: convert, inspect, run commands, batch, MCP server"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
