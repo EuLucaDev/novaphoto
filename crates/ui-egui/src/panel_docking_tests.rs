@@ -751,3 +751,42 @@ fn native_tab_reorder_stays_native_until_drag_crosses_the_strip() {
     let channels = tabs.iter().position(|(_, label)| *label == "Channels").unwrap();
     assert!(channels < layers, "upstream native reorder remains effective");
 }
+
+#[test]
+fn evolution_properties_start_docked_and_native_panels_have_one_owner() {
+    for theme in crate::theme::ThemeKind::ALL {
+        let mut app = app();
+        app.ui.theme = theme;
+        let layout = legacy_layout(&app, false);
+        assert!(layout.floating.iter().all(|p| !p.panels.contains(&"properties".to_string())));
+    }
+    let mut app = app();
+    app.run("window.panel.detach", json!({"panel":"properties"})).unwrap();
+    assert_eq!(app.ui.native_panels, vec!["properties"]);
+    assert!(!app.ui.docking.as_ref().unwrap().contains(&"properties".to_string()));
+    app.run("window.panels.restore", json!({})).unwrap();
+    assert!(app.ui.native_panels.is_empty());
+    let layout = app.ui.docking.as_ref().unwrap();
+    assert_eq!(layout.panels().iter().filter(|p| p.as_str() == "properties").count(), 1);
+}
+
+#[test]
+fn properties_is_in_the_default_dock_in_both_studio_themes() {
+    for theme in [crate::theme::ThemeKind::Studio, crate::theme::ThemeKind::StudioLight] {
+        let mut app = app();
+        app.session.execute("file.new", json!({"width":64,"height":64})).unwrap();
+        app.ui.panels.properties = true;
+        let mut h = Harness::builder().with_size(vec2(1024.0, 680.0)).build_ui_state(
+            |ui, app: &mut NovaphotoApp| {
+                if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("semibold".into()))) {
+                    crate::panels::right_dock(app, ui);
+                }
+            },
+            app,
+        );
+        NovaphotoApp::setup_context(&h.ctx, theme);
+        h.run_steps(4);
+        assert!(h.query_all_by_label("Properties").next().is_some(), "default Properties tab must be docked in {theme:?}");
+        assert!(h.state().ui.docking.as_ref().is_none_or(|l| l.floating.is_empty()));
+    }
+}

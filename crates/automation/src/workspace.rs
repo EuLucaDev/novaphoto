@@ -36,6 +36,40 @@ pub struct AuthorizedWorkspace {
 }
 
 impl AuthorizedWorkspace {
+    /// Export the canonical carousel command with rollback of files created by this operation.
+    pub fn export_carousel(&self, session: &mut novaphoto_engine::Session, params: &Value) -> Result<Value, AutomationError> {
+        let dir = params.get("dir").and_then(Value::as_str).ok_or_else(|| AutomationError::BadRequest("choose an export folder".into()))?;
+        let mut outputs = self.export_sequence(dir)?;
+        let result = novaphoto_engine::carousel_cmds::export_with_writer(session, params, &mut |path, bytes| {
+            let name =
+                Path::new(path).file_name().and_then(|s| s.to_str()).ok_or_else(|| novaphoto_engine::EngineError::Other("invalid card filename".into()))?;
+            outputs.write(name, bytes).map_err(|e| novaphoto_engine::EngineError::Other(e.to_string()))
+        });
+        match result {
+            Ok(value) => {
+                outputs.commit();
+                Ok(value)
+            }
+            Err(error) => {
+                outputs.cleanup()?;
+                Err(error.into())
+            }
+        }
+    }
+    /// Create a new export beneath the write capability; never truncate an existing file.
+    pub fn write_new(&self, path: &str, bytes: &[u8]) -> Result<(), AutomationError> {
+        let relative = request_path(path, self.write.as_ref())?;
+        let root = self.write.as_ref().ok_or_else(|| AutomationError::BadRequest(format!("{DENIED}: write authority is absent")))?;
+        let mut options = OpenOptions::new();
+        options.write(true).create_new(true);
+        let result = root.dir.open_with(&relative, &options).map_err(|e| file_error("create", path, e))?;
+        let mut file = result;
+        if let Err(error) = file.write_all(bytes).and_then(|_| file.sync_all()) {
+            let _ = root.dir.remove_file(&relative);
+            return Err(file_error("write", path, error));
+        }
+        Ok(())
+    }
     /// Open the configured roots as capabilities. Either authority may be
     /// omitted; omitted authority fails closed.
     pub fn new(read_root: Option<&Path>, write_root: Option<&Path>) -> Result<Self, AutomationError> {
@@ -245,6 +279,7 @@ pub fn authorize_engine_command(id: &str, params: &Value) -> Result<(), Automati
     let safe_file_command = matches!(
         id,
         "file.new"
+            | "file.new.carousel"
             | "file.newFromClipboard"
             | "file.close"
             | "file.closeAll"

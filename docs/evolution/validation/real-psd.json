@@ -1,0 +1,123 @@
+{
+  "original-flat": {
+    "exit": 0,
+    "seconds": 6.437
+  },
+  "divide-export": {
+    "exit": 0,
+    "seconds": 18.239
+  },
+  "native-flat": {
+    "exit": 0,
+    "seconds": 4.667
+  },
+  "psd-roundtrip": {
+    "exit": 0,
+    "seconds": 7.371
+  },
+  "psd-flat": {
+    "exit": 0,
+    "seconds": 3.045
+  },
+  "native-info": {
+    "exit": 0,
+    "seconds": 2.71
+  },
+  "psd-info": {
+    "exit": 0,
+    "seconds": 3.817
+  },
+  "nativePixels": {
+    "identical": true,
+    "maxChannelDifference": 0,
+    "meanAbsoluteDifference": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "psdPixels": {
+    "identical": true,
+    "maxChannelDifference": 0,
+    "meanAbsoluteDifference": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "socialCards": {
+    "identical": true,
+    "maxChannelDifference": 0,
+    "meanAbsoluteDifference": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "originalStructure": {
+    "layers": 55,
+    "kinds": {
+      "Smart Object": 30,
+      "Group": 14,
+      "Type": 6,
+      "Fill": 2,
+      "Shape": 2,
+      "Pixel": 1
+    }
+  },
+  "nativeStructure": {
+    "layers": 55,
+    "kinds": {
+      "Smart Object": 30,
+      "Group": 14,
+      "Type": 6,
+      "Fill": 2,
+      "Shape": 2,
+      "Pixel": 1
+    }
+  },
+  "psdStructure": {
+    "layers": 55,
+    "kinds": {
+      "Smart Object": 30,
+      "Group": 14,
+      "Type": 6,
+      "Fill": 2,
+      "Shape": 2,
+      "Pixel": 1
+    }
+  },
+  "sourceUnchanged": true,
+  "originalIcc": {
+    "bytes": 560,
+    "sha256": "07c1e0738ba6068b961ab698e24d5d9c06f71d4ee1d863aed239a24dd1fb8896"
+  },
+  "nativeIcc": {
+    "bytes": 560,
+    "sha256": "07c1e0738ba6068b961ab698e24d5d9c06f71d4ee1d863aed239a24dd1fb8896"
+  },
+  "roundtripIcc": {
+    "bytes": 560,
+    "sha256": "07c1e0738ba6068b961ab698e24d5d9c06f71d4ee1d863aed239a24dd1fb8896"
+  },
+  "social-referenceIcc": {
+    "bytes": 652,
+    "sha256": "f63f216844640cd8ee7f0d3f99424b530e008d7ba388c4d8aaf4fb189e2f4632"
+  },
+  "fixture": "Carrossel Feed.psd",
+  "sourceBytes": 85720309,
+  "canvas": [
+    3240,
+    1350
+  ],
+  "cards": 3,
+  "cardSize": [
+    1080,
+    1350
+  ],
+  "oracle": "Nova Photo CPU render before/after; no independent Photoshop comparison",
+  "timingsScope": "development build under concurrent compilation; not a performance baseline"
+}

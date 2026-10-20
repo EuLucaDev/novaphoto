@@ -443,3 +443,32 @@ async fn agent_completes_ten_more_scripted_tasks() {
     shutdown(c, server).await;
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn carousel_agent_journey_preserves_source_and_scoped_exports() {
+    let dir = tmp("carousel");
+    let png = gradient_png(&dir);
+    let (c, server) = connect(&dir).await;
+    run(&c, "file.new.carousel", json!({"width":32,"height":24,"cards":3,"name":"Campaign"})).await;
+    tool(&c, "doc_place", json!({"path":png})).await;
+    let doc = inspect(&c).await;
+    assert_eq!(doc["width"], 96);
+    assert!(doc["layers"].as_array().unwrap().len() >= 2);
+    tool(&c, "doc_save", json!({"path":"campaign.pcraft"})).await;
+    tool(&c, "doc_close", json!({})).await;
+    tool(&c, "doc_open", json!({"path":"campaign.pcraft"})).await;
+    run(&c, "file.export.carousel", json!({"dir":"cards","prefix":"campaign","format":"png"})).await;
+    for card in 1..=3 {
+        let bytes = std::fs::read(dir.join("cards").join(format!("campaign-{card:02}.png"))).unwrap();
+        assert_eq!(novaphoto_codecs::decode(&bytes).unwrap().dimensions(), (32, 24));
+    }
+    let mut call = CallToolRequestParams::new("command_run")
+        .with_arguments(json!({"id":"file.export.carousel","params":{"dir":"../","prefix":"escape"}}).as_object().unwrap().clone());
+    let denied = c.call_tool(call.clone()).await.unwrap();
+    assert_eq!(denied.is_error, Some(true));
+    call.arguments = Some(json!({"id":"file.export.carousel","params":{"dir":"cards","prefix":"campaign"}}).as_object().unwrap().clone());
+    let refused = c.call_tool(call).await.unwrap();
+    assert_eq!(refused.is_error, Some(true));
+    shutdown(c, server).await;
+    std::fs::remove_dir_all(dir).unwrap();
+}

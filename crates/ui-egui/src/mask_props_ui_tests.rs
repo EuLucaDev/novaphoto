@@ -16,11 +16,7 @@ fn harness(adjustment: bool, theme: crate::theme::ThemeKind) -> Harness<'static,
     let mut h = Harness::builder().with_size(vec2(800.0, 600.0)).with_step_dt(1.0 / 60.0).build_ui_state(
         |ui, app: &mut NovaphotoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("semibold".into()))) {
-                if Tokens::get(ui.ctx()).pro {
-                    properties_body(app, ui);
-                } else {
-                    properties_window(app, ui.ctx());
-                }
+                properties_body(app, ui);
             }
         },
         app,
@@ -132,11 +128,7 @@ fn vector_mask_properties_edit_density_and_feather() {
     let mut h = Harness::builder().with_size(vec2(800.0, 600.0)).with_step_dt(1.0 / 60.0).build_ui_state(
         |ui, app: &mut NovaphotoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("semibold".into()))) {
-                if Tokens::get(ui.ctx()).pro {
-                    properties_body(app, ui);
-                } else {
-                    properties_window(app, ui.ctx());
-                }
+                properties_body(app, ui);
             }
         },
         app,
@@ -227,7 +219,7 @@ fn card_harness(new_layer: bool, theme: crate::theme::ThemeKind) -> Harness<'sta
     let mut h = Harness::builder().with_size(vec2(800.0, 600.0)).with_step_dt(1.0 / 60.0).build_ui_state(
         |ui, app: &mut NovaphotoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("semibold".into()))) {
-                properties_window(app, ui.ctx());
+                properties_body(app, ui);
             }
         },
         app,

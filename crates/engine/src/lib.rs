@@ -23,6 +23,7 @@ pub mod brush_key_cmds;
 pub mod brush_preset_cmds;
 pub mod build_info;
 mod canvas_geom;
+pub mod carousel_cmds;
 mod channel_clip;
 pub mod channel_cmds;
 mod clip_group;
@@ -36,6 +37,7 @@ pub mod display_color;
 pub mod distort_cmds;
 pub mod doc_path;
 pub mod document_preset_cmds;
+pub mod document_setup;
 pub mod edit_cmds;
 pub mod edit_menu_cmds;
 pub mod eraser_cmds;
@@ -126,6 +128,7 @@ pub mod type_mask_cmds;
 pub mod type_spell_cmds;
 pub mod type_styles_cmds;
 mod variables_cmds;
+mod vector_clipboard_cmds;
 pub use variables_cmds::{export_data_sets_with, import_data_sets_text};
 pub mod vector_cmds;
 mod video_cmds;
@@ -207,6 +210,8 @@ pub struct DocState {
     pub path: Option<String>,
     /// An Affinity document (or its preview) must not acquire the native source as its Save path.
     pub source_read_only: bool,
+    /// Server-granted reader role. This is session authority, never document data.
+    pub edit_read_only: bool,
     /// Increments on every change; UIs re-render when it moves.
     pub revision: u64,
     pub saved_revision: u64,
@@ -269,6 +274,7 @@ impl DocState {
             layer_anchor: active_layer,
             path,
             source_read_only: false,
+            edit_read_only: false,
             revision: 1,
             saved_revision: 1,
             view_revision: 0,
@@ -710,6 +716,9 @@ impl Session {
     /// document, a hidden target. The run params (the Channels panel's target filled in) when it
     /// may run.
     pub(crate) fn admit(&mut self, id: &str, spec: &commands::CommandSpec, params: &Value) -> Result<Value> {
+        if !self.live.applying && self.active().is_some_and(|d| d.edit_read_only) && spec.journal && !id.starts_with("file.") {
+            return Err(EngineError::Other("This shared document is read-only".into()));
+        }
         let run_params = channel_cmds::inject_target(self, id, commands::inject_kind(id, params.clone()));
         if let Err(why) = self.explicit_layer_enabled(spec, params).unwrap_or_else(|| self.precondition(spec, &run_params)) {
             return Err(EngineError::Disabled(id.to_string(), why));
@@ -749,6 +758,9 @@ impl Session {
 
     /// The command's own precondition for a call with `params` (their target filled in).
     fn precondition(&self, spec: &commands::CommandSpec, params: &Value) -> std::result::Result<(), String> {
+        if !self.live.applying && self.active().is_some_and(|d| d.edit_read_only) && spec.journal && !spec.id.starts_with("file.") {
+            return Err("This shared document is read-only".into());
+        }
         if self.names_existing_layer(spec.id, params) {
             return Ok(());
         }
@@ -788,6 +800,9 @@ impl Session {
 
     /// Apply an undoable edit to the active document.
     pub fn edit<R>(&mut self, label: &str, f: impl FnOnce(&mut Document, &mut Option<LayerId>) -> Result<R>) -> Result<R> {
+        if !self.live.applying && self.active().is_some_and(|d| d.edit_read_only) {
+            return Err(EngineError::Other("This shared document is read-only".into()));
+        }
         // Every mutation path (linked-file refresh, transform, place) re-renders smart objects
         // through this entry; the requesting session's authority must reach those renders.
         let _authorization = crate::jobs::render_authorization_scope(self.authorize);
@@ -920,6 +935,9 @@ impl Session {
     }
 
     pub fn undo(&mut self) -> bool {
+        if !self.live.applying && self.active().is_some_and(|d| d.edit_read_only) {
+            return false;
+        }
         // A background job is computing from the current state: it must not move under it.
         if self.active_job().is_some() {
             return false;
@@ -946,6 +964,9 @@ impl Session {
     }
 
     pub fn redo(&mut self) -> bool {
+        if !self.live.applying && self.active().is_some_and(|d| d.edit_read_only) {
+            return false;
+        }
         if self.active_job().is_some() {
             return false;
         }

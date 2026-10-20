@@ -4000,3 +4000,100 @@ layerLabel	No Color	Sem cor
 	GPU Memory (MB, 0 = Automatic)	Memória da GPU (MB, 0 = Automático)
 	{name} was changed by another app after it was opened or saved here.	{name} foi alterado por outro app depois de ser aberto ou salvo aqui.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Substitua-o por este documento, ou cancele e use Arquivo › Salvar como para manter os dois.
+
+# Nova Photo evolution
+	Social	Redes sociais
+	Square Post	Post quadrado
+	Portrait Post	Post retrato
+	Stories and Reels	Stories e reels
+	LinkedIn Landscape	LinkedIn horizontal
+	YouTube Thumbnail	Miniatura do YouTube
+	Website Banner	Banner do site
+	New Carousel…	Novo carrossel…
+	New Carousel	Novo carrossel
+	Carousel	Carrossel
+	Cards	Cards
+	Advanced Options	Opções avançadas
+	Live	Ao vivo
+	Share this document	Compartilhar este documento
+	Divide into Carousel Cards…	Dividir em cards de carrossel…
+	Divide into Carousel Cards	Dividir em cards de carrossel
+	Export Carousel Cards…	Exportar cards do carrossel…
+	Export Carousel Cards	Exportar cards do carrossel
+	Filename Prefix	Prefixo dos arquivos
+	Export Folder	Pasta de exportação
+	Choose Folder…	Escolher pasta…
+	Cards are exported in sRGB. Existing files are never replaced.	Os cards são exportados em sRGB. Arquivos existentes nunca são substituídos.
+	Add transparent margin to fit equal cards	Adicionar margem transparente para criar cards iguais
+	Replace existing slices	Substituir fatias existentes
+	Required margin	Margem necessária
+	Choose an export folder	Escolha uma pasta de exportação
+	Connect Agent…	Conectar agente…
+	Connect Agent	Conectar agente
+	Authorized Workspace	Pasta de trabalho autorizada
+	Enable Connection	Ativar conexão
+	Disconnect Agent	Desconectar agente
+	Waiting for agent	Aguardando agente
+	Disconnected	Desconectado
+	Activity	Atividade
+	CLI executable	Executável do CLI
+	Test Connection	Testar conexão
+	Connection verified	Conexão verificada
+	Copy Claude Code Configuration	Copiar configuração para Claude Code
+	Copy Codex Configuration	Copiar configuração para Codex
+	Use your agent to operate Nova Photo. Conversation stays in Claude Code or Codex.	Use seu agente para operar o Nova Photo. A conversa continua no Claude Code ou no Codex.
+	Only files in this folder are available for reading and export.	Somente os arquivos desta pasta ficam disponíveis para leitura e exportação.
+	Add the configuration in your agent, then ask it to inspect the open document.	Adicione a configuração no seu agente e peça para inspecionar o documento aberto.
+	An external control session is already active	Já existe uma sessão externa de controle ativa
+	Agent connection is available in the desktop app	A conexão com agentes está disponível no aplicativo desktop
+	Reconnect to continue	Reconecte para continuar
+	Reconnect Account	Reconectar conta
+	Reconnect your account to continue editing. Your open work can still be saved.	Reconecte sua conta para continuar editando. Você ainda pode salvar os trabalhos abertos.
+	Move Panel to Separate Window	Mover painel para outra janela
+	Restore Panel Windows	Restaurar janelas dos painéis
+	Return to Main Window	Voltar para a janela principal
+	Share	Compartilhar
+	Shared with Me	Compartilhados comigo
+	Shared with Me…	Compartilhados comigo…
+	Share Permanently	Compartilhar permanentemente
+	Share Permanently…	Compartilhar permanentemente…
+	View Only	Só ver
+	Can Edit	Pode editar
+	Manage Access	Gerenciar acesso
+	Copy Link	Copiar link
+	Invited People	Pessoas convidadas
+	Department	Setor
+	Organization	Empresa
+	Apply Access	Aplicar acesso
+	Find a person	Buscar uma pessoa
+	Remove Access	Remover acesso
+	Open Current Version	Abrir versão atual
+	Save Local Copy	Salvar cópia local
+	Changes saved	Alterações salvas
+	Shared version saved	Versão compartilhada salva
+	Saved on this computer — upload pending	Salvo neste computador — envio pendente
+	Wait for the current operation to finish	Aguarde a conclusão da operação atual
+	No permanent documents yet. Share an open document to get started.	Ainda não há documentos permanentes. Compartilhe um documento aberto para começar.
+	Follow View	Seguir visualização
+	Stop Following	Parar de seguir
+	Participants	Participantes
+	Brand Library	Biblioteca da marca
+	Load Authorized Libraries	Carregar bibliotecas autorizadas
+	Copy Font Name	Copiar nome da fonte
+	Insert as Smart Object	Inserir como Objeto Inteligente
+	Sync Workspaces	Sincronizar espaços de trabalho
+	Saved layouts sync across your account. Monitor positions stay on this computer.	Os layouts salvos são sincronizados pela conta. As posições dos monitores ficam neste computador.
+	Download Workspaces	Baixar espaços de trabalho
+	Upload Workspaces	Enviar espaços de trabalho
+	Workspaces downloaded	Espaços de trabalho baixados
+	Workspaces uploaded	Espaços de trabalho enviados
+	No synced workspaces yet	Ainda não há espaços de trabalho sincronizados
+	Color Wheel	Roda de cores
+	Color Spectrum	Espectro de cores
+	Color Wheel — arrows adjust hue and saturation	Roda de cores — use as setas para ajustar matiz e saturação
+	Resolve Comment	Resolver comentário
+	Reopen Comment	Reabrir comentário
+	Comment at the current view center	Comentar no centro da visualização atual
+	Add Comment	Adicionar comentário
+	Restore as New Version	Restaurar como nova versão
+	Pending Local Copies	Cópias locais pendentes

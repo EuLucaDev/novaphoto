@@ -77,6 +77,7 @@ pub(crate) fn validate_new_params(s: &Session, p: &Value) -> Result<()> {
                 continue;
             }
             "name" => (value.is_string(), "a string".into()),
+            "artboards" | "colorProfile" | "pixelAspectRatio" => continue,
             _ => return Err(bad(cmd, format!("unknown parameter `{key}`"))),
         };
         if !valid {
@@ -86,6 +87,7 @@ pub(crate) fn validate_new_params(s: &Session, p: &Value) -> Result<()> {
     if p.get("background").and_then(Value::as_str) == Some("backgroundColor") {
         background_color(p, s.tools.background, cmd)?;
     }
+    crate::document_setup::validate(p, color_mode(p.get("mode").and_then(Value::as_str).unwrap_or("rgb")).unwrap_or(ColorMode::Rgb))?;
     Ok(())
 }
 
@@ -103,10 +105,17 @@ pub struct DocumentSettings {
     /// Display units only; width/height are always pixels and resolution is always ppi.
     pub unit: String,
     pub resolution_unit: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub artboards: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color_profile: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pixel_aspect_ratio: Option<f32>,
 }
 
 impl DocumentSettings {
     fn validate(&self) -> std::result::Result<(), String> {
+        crate::document_setup::validate(&self.command_params(), color_mode(&self.mode).unwrap_or(ColorMode::Rgb)).map_err(|e| e.to_string())?;
         if !(1..=MAX_DIMENSION).contains(&self.width) || !(1..=MAX_DIMENSION).contains(&self.height) {
             return Err(format!("Width and height must be within 1..={MAX_DIMENSION} pixels"));
         }
@@ -168,6 +177,15 @@ impl DocumentSettings {
             "mode":self.mode,"depth":self.depth,"background":self.background});
         if let Some(c) = self.background_color {
             p["backgroundColor"] = json!(c);
+        }
+        if self.artboards {
+            p["artboards"] = json!(true);
+        }
+        if let Some(profile) = &self.color_profile {
+            p["colorProfile"] = json!(profile);
+        }
+        if let Some(ratio) = self.pixel_aspect_ratio {
+            p["pixelAspectRatio"] = json!(ratio);
         }
         p
     }

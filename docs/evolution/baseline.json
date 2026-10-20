@@ -1,0 +1,16 @@
+{
+  "recordedAt": "2026-10-20",
+  "sourceRevision": "6991c0ca50da862915ef093824650de7b488446c",
+  "sourceVersion": "0.14.0",
+  "installedVersion": "0.14.0",
+  "installedKiB": 193000,
+  "platform": "macOS-26.2-arm64-arm-64bit-Mach-O",
+  "baselinePresetTests": {
+    "passed": 8,
+    "failed": 0
+  },
+  "nativeUiInspection": "Native automation pipe unavailable; offscreen before/after snapshots inspected and local JSON control working",
+  "performance": "Pending equivalent release measurements; historical 2026-10-05 values not treated as current evidence",
+  "packageSize": "not measured: no equivalent installer available locally",
+  "installedSourceRevision": "unknown: installed version alone does not identify the commit"
+}

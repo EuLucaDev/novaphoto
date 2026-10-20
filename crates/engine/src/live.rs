@@ -118,11 +118,13 @@ impl Session {
 
     pub fn live_load(&mut self, bytes: &[u8]) -> Result<()> {
         let i = self.live_index()?;
-        let doc = novaphoto_format::load_from_bytes(bytes).map_err(err)?;
-        let received_id = doc.id;
+        let mut doc = novaphoto_format::load_from_bytes(bytes).map_err(err)?;
         let prev = self.active_index();
         self.set_active(i);
         let st = self.active_mut().ok_or_else(|| err("sem imagem"))?;
+        // Session bindings belong to this local tab, including cloud identity and reader rights.
+        let received_id = st.doc.id;
+        doc.id = received_id;
         st.doc = Arc::new(doc);
         st.revision += 1;
         fresh_history(st);
@@ -278,6 +280,20 @@ mod tests {
         }
     }
 
+    #[test]
+    fn readers_reject_local_edits_and_undo_but_apply_authorized_remote_changes() {
+        let (mut a, mut b) = pair();
+        let id = b.active().unwrap().doc.id;
+        b.active_mut().unwrap().edit_read_only = true;
+        assert!(b.execute("layer.new.layer", json!({"name":"denied"})).is_err());
+        assert!(!b.undo());
+        assert!(!b.redo());
+        a.execute("layer.new.layer", json!({"name":"Allowed remote"})).unwrap();
+        sync(&mut a, &mut b);
+        assert_eq!(b.active().unwrap().doc.id, id);
+        assert!(b.active().unwrap().edit_read_only);
+        assert_eq!(a.live_digest().unwrap(), b.live_digest().unwrap());
+    }
     #[test]
     fn closing_a_shared_tab_never_shares_the_next_file() {
         let mut s = session();

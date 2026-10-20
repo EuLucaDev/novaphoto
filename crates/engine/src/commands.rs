@@ -490,7 +490,7 @@ fn build() -> Vec<CommandSpec> {
             "New…",
             ["File"],
             Some("Cmd+N"),
-            r##"{"width":1..300000=1920,"height":1..300000=1080 (pixel counts are rounded),"mode":"rgb|gray|grayscale|cmyk|lab"="rgb","depth":8|16|32=8,"background":"white|black|backgroundColor|transparent|#rrggbb"="white","backgroundColor":[r,g,b]? (0..1; defaults to toolbox colour),"resolution":1..30000=72 (ppi),"name":str}"##,
+            r##"{"width":1..300000=1920,"height":1..300000=1080 (pixel counts are rounded),"mode":"rgb|gray|grayscale|cmyk|lab"="rgb","depth":8|16|32=8,"background":"white|black|backgroundColor|transparent|#rrggbb"="white","backgroundColor":[r,g,b]? (0..1; defaults to toolbox colour),"resolution":1..30000=72 (ppi),"name":str,"artboards":bool=false,"colorProfile":builtin-id?,"pixelAspectRatio":0.1..10=1}"##,
             always,
             |s, p| {
                 use crate::document_preset_cmds::{MAX_DIMENSION, MAX_RESOLUTION, background_color, color_mode, sample_type};
@@ -526,7 +526,16 @@ fn build() -> Vec<CommandSpec> {
                     }
                 };
                 doc.resolution_dpi = res;
+                crate::document_setup::apply(&mut doc, p);
+                let active = if p.get("artboards").and_then(Value::as_bool) == Some(true) {
+                    doc.layers.first().and_then(|l| if let LayerContent::Group(g) = &l.content { g.children.last().map(|l| l.id) } else { None })
+                } else {
+                    None
+                };
                 let i = s.add_document(doc, None);
+                if let Some(layer) = active {
+                    s.select_layer(layer)?;
+                }
                 Ok(json!({ "document": i }))
             }
         ),
@@ -1433,6 +1442,7 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::extra_cmds::specs());
     v.extend(crate::background_cmds::specs());
     v.extend(crate::file_cmds::specs());
+    v.extend(crate::vector_clipboard_cmds::specs());
     v.extend(crate::exr_cmds::specs());
     v.extend(crate::type_extra_cmds::specs());
     v.extend(crate::type_styles_cmds::specs());
@@ -1463,6 +1473,7 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::warp_cmds::specs());
     v.extend(crate::comps_cmds::specs());
     v.extend(crate::artboard_cmds::specs());
+    v.extend(crate::carousel_cmds::specs());
     v.extend(crate::distort_cmds::specs());
     v.extend(crate::analysis_cmds::specs());
     v.extend(crate::notes_cmds::specs());

@@ -859,7 +859,10 @@ fn remember_web_settings(s: &mut Session, cmd: &str, settings: &Value) {
 
 fn save_for_web_impl(s: &mut Session, p: &Value, write: &mut dyn FnMut(&str, &[u8]) -> Result<()>, native_paths: bool) -> Result<Value> {
     let cmd = "file.export.saveForWebLegacy";
-    if let Some(authorize) = s.authorize {
+    // An injected writer owns output authority (for example a confined MCP directory).
+    // Keep the session policy for linked-file reads during rendering, but only the native
+    // writer needs ambient filesystem export authority.
+    if native_paths && let Some(authorize) = s.authorize {
         authorize(cmd, p)?;
     }
     // Direct platform calls must export the moved selection as it appears on the canvas,

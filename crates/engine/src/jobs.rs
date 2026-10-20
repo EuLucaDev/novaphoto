@@ -729,6 +729,8 @@ impl Session {
         }
         if id == "file.new" {
             crate::document_preset_cmds::validate_new_params(self, &params)?;
+        } else if id == "file.new.carousel" {
+            crate::carousel_cmds::validate_creation(self, &params)?;
         }
         crate::param_check::check(spec, &params)?;
         crate::filters::validate_params(id, &params)?;

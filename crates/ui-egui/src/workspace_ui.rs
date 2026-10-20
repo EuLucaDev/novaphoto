@@ -175,6 +175,7 @@ fn new_workspace(app: &mut NovaphotoApp, p: &Value) -> Result<Value, String> {
     }
     let prefs = app.session.prefs().clone();
     let mut ws = json!({"panels": app.ui.panels, "dockTabs": app.ui.dock_tabs, "dock": app.ui.dock, "timelineOpen": app.ui.timeline.open, "docking": app.ui.docking, "dockingHidden": app.ui.docking_hidden, "dockingCollapsed": app.ui.docking_collapsed});
+    ws["nativePanels"] = json!(app.ui.native_panels);
     // The icon rail and menu bar flags belong to an embedding app's session, not to a saved
     // layout: a workspace never brings back a window without its menus.
     if let Some(panels) = ws.get_mut("panels").and_then(Value::as_object_mut) {
@@ -230,6 +231,16 @@ pub fn apply_custom(app: &mut NovaphotoApp) -> bool {
     // Workspaces saved before the dock layout existed get the default heights.
     app.ui.dock = Default::default();
     crate::dock::apply(app, &ws);
+    app.ui.native_panels = ws
+        .get("nativePanels")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .take(32)
+        .filter_map(Value::as_str)
+        .filter_map(crate::panel_docking::normalize)
+        .map(str::to_string)
+        .collect();
     let (sc, menus, toolbar) = (ws.get("shortcuts").cloned(), ws.get("menus").cloned(), ws.get("toolbar").cloned());
     if sc.is_some() || menus.is_some() || toolbar.is_some() {
         app.session.prefs.edit(|p| {

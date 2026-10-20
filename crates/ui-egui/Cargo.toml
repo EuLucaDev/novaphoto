@@ -42,8 +42,8 @@ base64 = "0.22"
 flate2 = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-nova-account-ui = { git = "https://github.com/EuLucaDev/nova-live", rev = "d0c50673eb1b525c3efbfda72e33bdeb4569e1e7" }
-nova-live = { git = "https://github.com/EuLucaDev/nova-live", rev = "d0c50673eb1b525c3efbfda72e33bdeb4569e1e7" }
+nova-account-ui = { git = "https://github.com/EuLucaDev/nova-live", rev = "cd3d39c16b1d10174e90ab589b2a47295869c145" }
+nova-live = { git = "https://github.com/EuLucaDev/nova-live", rev = "cd3d39c16b1d10174e90ab589b2a47295869c145" }
 
 rayon = { workspace = true }
 # Safe native UI-language APIs (Windows/macOS); no subprocess or web dependency.

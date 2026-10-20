@@ -16,6 +16,8 @@ pub struct LiveUi {
     document_ready: bool,
     pub invite_text: String,
     pub peers: Vec<Peer>,
+    pub following: Option<String>,
+    followed_view: Option<([f32; 2], f32, f32)>,
     pub error: Option<String>,
     pub notice: Option<String>,
     /// Convite recebido pela linha de comando (`--join <link>`), aberto no primeiro quadro.
@@ -123,6 +125,13 @@ pub fn host(app: &mut NovaphotoApp) {
 
 /// Entra num documento compartilhado pelo convite (link do app ou da página de convite).
 pub fn join(app: &mut NovaphotoApp, text: &str) {
+    if let Some(document) = nova_live::documents::document_link(text) {
+        app.shared.open = true;
+        if let Some(Err(error)) = crate::shared_ui::command(app, "shared.open", &serde_json::json!({"id":document})) {
+            app.shared.error = Some(error);
+        }
+        return;
+    }
     if !nova_live::identity::authorized(APP) {
         app.live.error = Some("Conecte uma conta com acesso a este aplicativo.".into());
         return;
@@ -163,6 +172,8 @@ pub fn join(app: &mut NovaphotoApp, text: &str) {
 pub fn stop(app: &mut NovaphotoApp) {
     app.live.live = None;
     app.live.peers.clear();
+    app.live.following = None;
+    app.live.followed_view = None;
     app.live.document_ready = false;
     app.session.live_stop();
 }
@@ -235,7 +246,7 @@ pub fn pump(app: &mut NovaphotoApp, ctx: &Context) {
             app.live.open = true;
             continue;
         }
-        if nova_live::Invite::parse(&link).is_ok() {
+        if nova_live::Invite::parse(&link).is_ok() || nova_live::documents::document_link(&link).is_some() {
             app.live.pending_join = Some(link);
         }
     }
@@ -256,7 +267,7 @@ pub fn pump(app: &mut NovaphotoApp, ctx: &Context) {
         && app.session.live_on_screen()
         && let Some(xf) = crate::canvas::ViewXform::active(app)
     {
-        let back = xf.clone();
+        let back = xf;
         app.live.view = Some(LiveView::new(
             xf.rect,
             "imagem",
@@ -269,6 +280,43 @@ pub fn pump(app: &mut NovaphotoApp, ctx: &Context) {
     }
     let cursor = my_cursor(app, ctx);
     let Some(live) = app.live.live.as_mut() else { return };
+    let navigated = ctx.input(|i| {
+        let on_canvas = app.live.view.as_ref().is_some_and(|v| i.pointer.latest_pos().is_some_and(|p| v.rect.contains(p)));
+        (on_canvas && (i.pointer.any_pressed() || i.smooth_scroll_delta != egui::Vec2::ZERO))
+            || i.key_pressed(egui::Key::ArrowLeft)
+            || i.key_pressed(egui::Key::ArrowRight)
+            || i.key_pressed(egui::Key::ArrowUp)
+            || i.key_pressed(egui::Key::ArrowDown)
+    });
+    let changed_camera = app
+        .live
+        .followed_view
+        .is_some_and(|previous| app.session.active_index().and_then(|i| app.ui.views.get(i)).is_none_or(|v| (v.center, v.zoom, v.rotation) != previous));
+    if navigated || changed_camera {
+        app.live.following = None;
+    }
+    if app.live.following.is_none() {
+        app.live.followed_view = None;
+    }
+    if let Some(peer) = app.live.following.as_deref() {
+        if let Some((center, zoom, rotation)) = live.view(peer) {
+            if let Some(view) = app.session.active_index().and_then(|i| app.ui.views.get_mut(i)) {
+                view.center = center;
+                view.zoom = zoom;
+                view.rotation = rotation;
+                view.fit_pending = false;
+                view.fill_pending = false;
+                app.live.followed_view = Some((center, zoom, rotation));
+            }
+        } else if !live.peers().iter().any(|p| p.id == peer) {
+            app.live.following = None;
+        }
+    }
+    if app.session.live_on_screen()
+        && let Some(view) = app.session.active_index().and_then(|i| app.ui.views.get(i))
+    {
+        live.send_view(view.center, view.zoom, view.rotation);
+    }
     live.set_cursor(cursor);
     let notices = live.pump(&mut Doc(&mut app.session));
     app.live.peers = live.peers().to_vec();
@@ -294,11 +342,35 @@ pub fn pump(app: &mut NovaphotoApp, ctx: &Context) {
 
 /// O botão da barra de título: "Colaborar" ou "Ao vivo · N".
 pub fn button(app: &mut NovaphotoApp, ui: &mut egui::Ui) {
-    let people =
-        app.live.peers.iter().map(|p| nova_account_ui::Presence { user_id: p.user_id.clone(), name: p.name.clone(), host: p.host }).collect::<Vec<_>>();
-    if nova_account_ui::share_button(ui, &people, app.live.active()).clicked() {
-        app.live.open = true;
+    let label = if app.live.active() { format!("{} · {}", tl!("Live"), app.live.peers.len().max(1)) } else { tl!("Share").to_string() };
+    let response = crate::widgets::primary_button(ui, &label, 100.0).on_hover_text(tl!("Share this document"));
+    response.context_menu(|ui| participants(app, ui));
+    if response.clicked() {
+        if app.session.active().is_some_and(|d| app.shared.bindings.contains_key(&d.doc.id)) {
+            app.shared.open = true;
+        } else {
+            app.live.open = true;
+        }
     }
+}
+
+/// Participant controls are shared by the persistent and temporary document windows.
+pub fn participants(app: &mut NovaphotoApp, ui: &mut egui::Ui) {
+    ui.horizontal_wrapped(|ui| {
+        for peer in app.live.peers.clone() {
+            if app.live.live.as_ref().is_some_and(|live| live.local_peer_id() == peer.id) {
+                continue;
+            }
+            let following = app.live.following.as_deref() == Some(peer.id.as_str());
+            if ui.selectable_label(following, &peer.name).on_hover_text(tl!("Follow View")).clicked() {
+                app.live.following = if following { None } else { Some(peer.id) };
+                app.live.followed_view = None;
+            }
+        }
+        if app.live.following.is_some() && ui.button(tl!("Stop Following")).clicked() {
+            app.live.following = None;
+        }
+    });
 }
 
 /// A janela Colaborar.
@@ -326,6 +398,13 @@ pub fn window(app: &mut NovaphotoApp, ctx: &Context) {
         app.live.open = false;
     }
     match action {
+        Some(nova_account_ui::ShareAction::Permanent) => {
+            app.live.open = false;
+            app.shared.open = true;
+            if let Err(e) = app.run("shared.refresh", serde_json::json!({})) {
+                app.shared.error = Some(e);
+            }
+        }
         Some(nova_account_ui::ShareAction::Host) => host(app),
         Some(nova_account_ui::ShareAction::Join) => {
             let text = app.live.invite_text.clone();
@@ -339,20 +418,9 @@ pub fn window(app: &mut NovaphotoApp, ctx: &Context) {
     }
 }
 
-pub fn bar(app: &mut NovaphotoApp, ui: &mut egui::Ui) {
-    egui::Panel::top("nova-live-bar").show(ui, |ui| {
-        ui.horizontal(|ui| {
-            ui.label(egui::RichText::new("Nova Foods").strong());
-            ui.separator();
-            ui.label(if app.live.active() { "Arquivo compartilhado" } else { "Colabore neste arquivo" });
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| button(app, ui));
-        });
-    });
-}
-
 /// Keep private invitation tokens out of file-open paths and their diagnostic logs.
 pub fn is_invite_arg(arg: &str) -> bool {
-    arg == "--join" || nova_live::Invite::parse(arg).is_ok()
+    arg == "--join" || nova_live::Invite::parse(arg).is_ok() || nova_live::documents::document_link(arg).is_some()
 }
 
 pub fn launch_invite() -> Option<String> {

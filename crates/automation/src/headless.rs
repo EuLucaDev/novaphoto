@@ -336,6 +336,13 @@ impl Headless {
     pub fn command_start(&mut self, id: &str, params: Value, wait: bool) -> Result<Value, AutomationError> {
         let params = if params.is_null() { json!({}) } else { params };
         if !matches!(&self.filesystem, Filesystem::TrustedLocal) {
+            if id == "file.export.carousel" {
+                let workspace = match &self.filesystem {
+                    Filesystem::Workspace(w) => w,
+                    _ => return Err(AutomationError::BadRequest("automation write authority is absent".into())),
+                };
+                return workspace.export_carousel(&mut self.session, &params);
+            }
             if id == "file.export.renderVideo" {
                 return self.render_video(params, |_, _| true);
             }

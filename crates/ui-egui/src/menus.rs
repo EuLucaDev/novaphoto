@@ -86,6 +86,13 @@ pub fn invoke(app: &mut NovaphotoApp, ctx: &egui::Context, id: &str, params: Val
 
 /// [`invoke`] without the unsaved-changes prompt, for once the user has already answered it.
 pub(crate) fn invoke_unguarded(app: &mut NovaphotoApp, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
+    if id == "help.connectAgent" {
+        app.agent.open = true;
+        return Ok(Value::Null);
+    }
+    if let Some(result) = crate::carousel_ui::menu(app, id, &params) {
+        return result;
+    }
     if let Some(tool) = crate::tool_shortcuts::tool(id) {
         crate::tool_memory::select(app, tool);
         return Ok(json!({"tool": tool}));
@@ -207,6 +214,11 @@ pub(crate) fn invoke_unguarded(app: &mut NovaphotoApp, ctx: &egui::Context, id: 
             Ok(Value::Null)
         }
         "layer.duplicate" if params.as_object().is_none_or(|o| o.is_empty()) => crate::duplicate_layer_ui::open(app),
+        "file.new.carousel" if params.as_object().is_none_or(|o| o.is_empty()) => {
+            let fields = json!({"width":1080,"height":1350,"name":tl!("Carousel"),"background":"white","__carousel":true,"__category":"Social","__cards":5});
+            let d = app.ui.open_dialog(DialogKind::NewDocument, fields.as_object().cloned().unwrap_or_default());
+            Ok(json!({"dialog":d}))
+        }
         "file.new" if params.as_object().is_none_or(|o| o.is_empty()) => {
             let fields = app.new_document_fields();
             let d = app.ui.open_dialog(DialogKind::NewDocument, fields);
@@ -223,6 +235,10 @@ pub(crate) fn invoke_unguarded(app: &mut NovaphotoApp, ctx: &egui::Context, id: 
             app.ask_folder(|app, path| app.run("file.import.videoFramesToLayers", json!({"path": path})).map_err(|e| e.to_string()))
         }
         "file.save" => {
+            #[cfg(not(target_arch = "wasm32"))]
+            if app.session.active().is_some_and(|d| app.shared.bindings.contains_key(&d.doc.id)) {
+                return crate::shared_ui::save(app);
+            }
             // Writes back only to a layered file that holds the whole document; anything else
             // goes through Save As, so the original is never overwritten with less (#3806).
             let tga_bits = crate::targa_options_ui::bits_param(&params, id)?;
@@ -1544,6 +1560,7 @@ pub fn apply_workspace(app: &mut NovaphotoApp) {
     app.ui.docking_generation = app.ui.docking_generation.wrapping_add(1);
     app.ui.docking = None;
     app.ui.docking_hidden.clear();
+    app.ui.native_panels.clear();
     app.ui.docking_collapsed.clear();
     app.ui.dock_tabs = Default::default();
     let p = &mut app.ui.panels;

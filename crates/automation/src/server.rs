@@ -220,6 +220,7 @@ pub struct RunParams {
     pub id: String,
     /// Command parameters as a JSON object (see the `params` doc in `command_list`).
     #[serde(default)]
+    #[schemars(with = "Option<std::collections::BTreeMap<String, Value>>")]
     pub params: Option<Value>,
     /// Wait for a long command (filters, Content-Aware Fill, Photomerge, …) to finish (default
     /// true). With false it runs as a background job and the result is `{"job": id}`: poll it
@@ -330,6 +331,7 @@ pub struct UiSetParams {
     /// blend mode name) for the Layers panel filter). strokeTrace (true, false, "stderr" or "off":
     /// the stroke latency trace at runtime; a CSV file is set at launch with --stroke-trace, not
     /// over this channel). Other fields are an error.
+    #[schemars(with = "std::collections::BTreeMap<String, Value>")]
     pub fields: Value,
 }
 
@@ -339,6 +341,7 @@ pub struct ControlParams {
     /// Any control-protocol method, e.g. `ui.dialog.open`.
     pub method: String,
     #[serde(default)]
+    #[schemars(with = "Option<std::collections::BTreeMap<String, Value>>")]
     pub params: Option<Value>,
 }
 
@@ -617,7 +620,7 @@ impl NovaphotoMcp {
             opts.insert("center".into(), json!(v));
         }
         let opts = Value::Object(opts);
-        // Bridge mode runs the app on this machine, which reads the path itself like any command.
+        // The open app resolves the path through its read capability, like the headless host.
         let mut bridge_params = opts.clone();
         if let Some(o) = bridge_params.as_object_mut() {
             o.insert("path".into(), Value::String(p.path.clone()));
@@ -626,7 +629,13 @@ impl NovaphotoMcp {
         if let Some(r) = self.headless_op(move |h| h.place(index, &path, &opts)).await {
             return to_result(r);
         }
-        self.run_command("file.placeEmbedded".into(), bridge_params, true).await
+        let Some(bridge) = self.bridge_client() else {
+            return Ok(no_backend());
+        };
+        if let Some(index) = index {
+            bridge_params["index"] = json!(index);
+        }
+        to_result(bridge.call("app.place", bridge_params).await)
     }
 
     #[tool(
@@ -1154,6 +1163,20 @@ mod tests {
         assert_eq!(reply["failed"], 1);
         let docs = mcp.headless_op(|h| Ok(h.session.documents().len())).await.unwrap().unwrap();
         assert_eq!(docs, 0, "the step after the budget ran out did not run");
+    }
+
+    #[test]
+    fn command_schema_exposes_object_parameters_to_clients() {
+        let server = NovaphotoMcp::headless();
+        for (name, field) in [("command_run", "params"), ("control_call", "params"), ("ui_set", "fields")] {
+            let tool = server.tool_router.map.get(name).unwrap();
+            let parameter = &tool.attr.input_schema["properties"][field];
+            let object_type = |v: &Value| v["type"] == "object" || v["type"].as_array().is_some_and(|types| types.iter().any(|t| t == "object"));
+            assert!(
+                object_type(parameter) || parameter["anyOf"].as_array().is_some_and(|types| types.iter().any(object_type)),
+                "{name}.{field}: clients must receive an object schema, not an unconstrained value: {parameter}"
+            );
+        }
     }
 
     /// The MCP server applies finished jobs before every tool call too (#503).

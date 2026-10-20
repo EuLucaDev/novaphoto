@@ -16,6 +16,65 @@ use novaphoto_ui_egui::ControlRequest;
 use novaphoto_ui_egui::control::REPLY_DEADLINE;
 use serde_json::{Value, json};
 
+/// Runtime control session owned by the optional agent panel. Dropping it revokes every socket.
+pub struct Managed {
+    stopped: Arc<std::sync::atomic::AtomicBool>,
+    sockets: Arc<std::sync::Mutex<Vec<(u64, TcpStream)>>>,
+    pub port: u16,
+}
+impl Drop for Managed {
+    fn drop(&mut self) {
+        self.stopped.store(true, std::sync::atomic::Ordering::Release);
+        for (_, stream) in self.sockets.lock().unwrap_or_else(std::sync::PoisonError::into_inner).drain(..) {
+            let _ = stream.shutdown(std::net::Shutdown::Both);
+        }
+    }
+}
+pub fn managed(token: String, ctx: egui::Context) -> std::io::Result<(Receiver<ControlRequest>, Managed)> {
+    let listener = TcpListener::bind(("127.0.0.1", 0))?;
+    listener.set_nonblocking(true)?;
+    let port = listener.local_addr()?.port();
+    let stopped = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let sockets = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let guard = Managed { stopped: stopped.clone(), sockets: sockets.clone(), port };
+    let (tx, rx) = channel();
+    std::thread::spawn(move || {
+        let limiter = ConnectionLimiter::new(MAX_CONNECTIONS);
+        let mut sequence = 0u64;
+        while !stopped.load(std::sync::atomic::Ordering::Acquire) {
+            match listener.accept() {
+                Ok((stream, _)) => {
+                    let Some(permit) = limiter.try_acquire() else {
+                        continue;
+                    };
+                    let Ok(copy) = stream.try_clone() else {
+                        continue;
+                    };
+                    let mut all = sockets.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+                    // A revoked session cannot add a socket after Drop drained the list.
+                    if stopped.load(std::sync::atomic::Ordering::Acquire) {
+                        let _ = stream.shutdown(std::net::Shutdown::Both);
+                        break;
+                    }
+                    let id = sequence;
+                    sequence = sequence.wrapping_add(1);
+                    all.push((id, copy));
+                    drop(all);
+                    let (tx, ctx, token, sockets) = (tx.clone(), ctx.clone(), token.clone(), sockets.clone());
+                    std::thread::spawn(move || {
+                        let _permit = permit;
+                        serve(stream, &token, tx, ctx);
+                        sockets.lock().unwrap_or_else(std::sync::PoisonError::into_inner).retain(|(key, _)| *key != id);
+                    });
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => std::thread::sleep(Duration::from_millis(25)),
+                Err(_) => break,
+            }
+        }
+    });
+    Ok((rx, guard))
+}
+
 pub fn start(port: u16, token: String, ctx: egui::Context) -> Receiver<ControlRequest> {
     let (tx, rx) = channel::<ControlRequest>();
     let listener = match TcpListener::bind(("127.0.0.1", port)) {
@@ -130,6 +189,30 @@ fn serve_with_auth_deadline(stream: TcpStream, token: &str, tx: Sender<ControlRe
 mod tests {
     use super::*;
     use std::io::BufRead;
+
+    #[test]
+    fn managed_session_requires_authentication_and_drop_revokes_sockets() {
+        const TOKEN: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        let (rx, guard) = managed(TOKEN.into(), egui::Context::default()).unwrap();
+        let mut bad = TcpStream::connect(("127.0.0.1", guard.port)).unwrap();
+        bad.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
+        writeln!(bad, "{}", json!({"id":1,"method":"ui.inspect"})).unwrap();
+        let mut line = String::new();
+        BufReader::new(bad).read_line(&mut line).unwrap();
+        assert_eq!(serde_json::from_str::<Value>(&line).unwrap()["ok"], false);
+        assert!(rx.try_recv().is_err());
+        let mut socket = TcpStream::connect(("127.0.0.1", guard.port)).unwrap();
+        socket.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
+        let mut reader = BufReader::new(socket.try_clone().unwrap());
+        writeln!(socket, "{}", json!({"id":2,"method":"auth","params":{"token":TOKEN}})).unwrap();
+        line.clear();
+        reader.read_line(&mut line).unwrap();
+        assert_eq!(serde_json::from_str::<Value>(&line).unwrap()["ok"], true);
+        drop(guard);
+        line.clear();
+        assert!(reader.read_line(&mut line).is_err() || line.is_empty());
+        assert!(rx.try_recv().is_err());
+    }
 
     /// #4965: a connection that keeps sending without authenticating is closed at the deadline
     /// (releasing its connection permit), and nothing it sent is dispatched.

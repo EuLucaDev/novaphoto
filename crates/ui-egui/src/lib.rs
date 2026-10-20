@@ -22,6 +22,7 @@ pub mod adjust_dialog;
 pub mod adjust_editors;
 pub mod adjust_preview;
 pub mod adjust_ui;
+pub mod agent_ui;
 mod alt_grab;
 pub mod analysis_ui;
 pub mod anchor_tools;
@@ -51,6 +52,7 @@ pub mod canvas;
 pub mod canvas_autoscroll;
 mod canvas_popup;
 pub mod canvas_tool_menu;
+mod carousel_ui;
 pub mod cas_transform;
 pub mod channel_options_ui;
 pub mod channel_view;
@@ -190,6 +192,8 @@ pub mod served_fonts;
 pub mod shape_dialog;
 pub(crate) mod shape_fill_ui;
 pub mod shape_stroke_ui;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod shared_ui;
 pub mod shortcut_dispatch;
 pub mod shortcuts;
 mod single_line_drag;
@@ -387,6 +391,7 @@ pub(crate) enum SaveKind {
 pub type AutomationReadFn = Box<dyn FnMut(&str) -> Result<(String, Vec<u8>), String>>;
 /// Write bytes through the desktop control session's authorized write root.
 pub type AutomationWriteFn = Box<dyn FnMut(&str, &[u8]) -> Result<(), String>>;
+pub type AutomationCarouselFn = Box<dyn FnMut(&mut Session, &serde_json::Value) -> Result<serde_json::Value, String>>;
 /// Load a directory-form `.pcraft` through the authorized read root, returning its display
 /// name (the file name) and the loaded document. `Ok(None)` marks a regular file: the
 /// caller falls back to the bytes path for the zip form.
@@ -454,6 +459,7 @@ pub type CaptionStyleFn = Box<dyn Fn(&egui::Context) -> CaptionStyle>;
 /// I/O dependencies.
 #[derive(Default)]
 pub struct Services {
+    pub agent_connect: Option<agent_ui::ConnectFn>,
     /// User-initiated desktop/browser pixel sampling.
     pub screen_pick: Option<screen_picker::Service>,
     /// Decode a file's bytes into a document (PSD, PNG, JPEG, …).
@@ -477,6 +483,8 @@ pub struct Services {
     /// using `file_dialog` and `write` with the user's authority.
     pub automation_read: Option<AutomationReadFn>,
     pub automation_write: Option<AutomationWriteFn>,
+    pub automation_write_new: Option<AutomationWriteFn>,
+    pub automation_carousel: Option<AutomationCarouselFn>,
     pub automation_open_pcraft: Option<AutomationOpenPcraftFn>,
     pub automation_command: Option<AutomationCommandFn>,
     /// Same policy as [`Self::automation_command`], as a function pointer the engine calls for
@@ -499,6 +507,7 @@ pub struct Services {
     pub place_inbox: Option<Inbox>,
     /// OS clipboard images: copies go out, screenshots and images from other apps come in.
     pub clipboard_set_image: Option<ClipboardSetFn>,
+    pub clipboard_get_svg: Option<Box<dyn FnMut() -> Option<Vec<u8>>>>,
     pub clipboard_get_image: Option<ClipboardGetFn>,
     /// Preferences persistence: the platform config directory on native, browser storage on
     /// the web (see `prefs_ui`).
@@ -565,6 +574,11 @@ pub struct NovaphotoApp {
     #[cfg(not(target_arch = "wasm32"))]
     pub live: live_ui::LiveUi,
     pub session: Session,
+    pub agent: agent_ui::AgentUi,
+    #[cfg(not(target_arch = "wasm32"))]
+    pub shared: shared_ui::SharedUi,
+    account_was_verified: bool,
+    account_recovery: bool,
     pub ui: UiState,
     pub services: Services,
     /// Canvas caches per (document, display): CPU textures hold monitor values; the GPU
@@ -688,6 +702,8 @@ pub struct NovaphotoApp {
     pub(crate) drop_places: std::collections::VecDeque<file_open::DropPlace>,
     /// The document each of `ui.views` belongs to, as of the last [`Self::sync_views`].
     view_docs: Vec<DocId>,
+    aspect_document: Option<DocId>,
+    view_aspects: std::collections::HashMap<DocId, String>,
     pub fps: f32,
     pub(crate) last_frame_time: f64,
     thumbs: HashMap<(novaphoto_doc::LayerId, u8), (u64, egui::TextureHandle)>,
@@ -852,6 +868,11 @@ impl NovaphotoApp {
         let mut app = Self {
             #[cfg(not(target_arch = "wasm32"))]
             live: live_ui::LiveUi::default(),
+            agent: Default::default(),
+            #[cfg(not(target_arch = "wasm32"))]
+            shared: Default::default(),
+            account_was_verified: false,
+            account_recovery: false,
             session,
             ui: UiState::default(),
             services,
@@ -909,6 +930,8 @@ impl NovaphotoApp {
             tab_strip: None,
             drop_places: Default::default(),
             view_docs: Vec::new(),
+            aspect_document: None,
+            view_aspects: Default::default(),
             fps: 0.0,
             last_frame_time: 0.0,
             thumbs: HashMap::new(),
@@ -1052,6 +1075,13 @@ impl NovaphotoApp {
 
     /// Run an engine command, reporting errors in the status bar.
     pub fn run(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        if self.account_recovery && !matches!(id, "file.save" | "file.saveAs" | "file.close" | "file.closeAll") {
+            return Err(tl!("Reconnect your account to continue editing. Your open work can still be saved.").into());
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(result) = shared_ui::command(self, id, &params) {
+            return result;
+        }
         if let Some(result) = delete_layer_prompt::intercept(self, id, &params) {
             return result;
         }
@@ -1113,6 +1143,16 @@ impl NovaphotoApp {
         }
         if let Some(r) = crate::crop_ui::intercept(self, id) {
             return r;
+        }
+        if matches!(id, "edit.paste" | "edit.pasteSpecial.pasteInPlace")
+            && self.ui.text_edit.is_none()
+            && self.session.active().is_some()
+            && let Some(bytes) = self.services.clipboard_get_svg.as_mut().and_then(|get| get())
+            && bytes.len() <= 8 * 1024 * 1024
+            && novaphoto_io::svg::is_svg(&bytes)
+            && let Ok(svg) = String::from_utf8(bytes)
+        {
+            return self.run("edit.pasteVector", serde_json::json!({"svg":svg}));
         }
         let suppress_events = self.automation_input && self.session.prefs().script_events.enabled;
         if suppress_events {
@@ -1276,6 +1316,22 @@ impl NovaphotoApp {
         }
         self.canvases.retain(|(doc, _), _| ids.contains(doc));
         self.navigator_textures.retain(|doc, _| ids.contains(doc));
+        let current = self.session.active().map(|d| d.doc.id);
+        if current != self.aspect_document {
+            if let Some(previous) = self.aspect_document {
+                self.view_aspects.insert(previous, self.ui.view.pixel_aspect.clone());
+            }
+            if let Some(doc) = self.session.active() {
+                let ratio = novaphoto_engine::document_setup::pixel_aspect(&doc.doc);
+                self.ui.view.pixel_aspect = self
+                    .view_aspects
+                    .get(&doc.doc.id)
+                    .cloned()
+                    .unwrap_or_else(|| if ratio == 1.0 { "square".into() } else { format!("custom:{ratio}:Document") });
+            }
+            self.aspect_document = current;
+        }
+        self.view_aspects.retain(|id, _| ids.contains(id));
         self.view_docs = ids;
         self.prune_thumbs();
         self.sync_mask_targets();
@@ -1788,6 +1844,9 @@ impl NovaphotoApp {
                 let _ = reply.send(serde_json::json!({"ok": false, "error": control::expired_error()}));
                 continue;
             }
+            if self.agent.connection.is_some() {
+                self.agent.activity = req.method.clone();
+            }
             match control::handle(self, ctx, &req) {
                 control::Outcome::Done(v) => {
                     let _ = reply.send(v);
@@ -1999,10 +2058,52 @@ impl eframe::App for NovaphotoApp {
         }
         let ctx = ui.ctx().clone();
         #[cfg(not(target_arch = "wasm32"))]
+        shared_ui::tick(self, &ctx);
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let local = nova_live::identity::local_authorized("novaphoto");
+            self.account_was_verified |= local;
+            self.account_recovery = self.account_was_verified && !local;
+            if self.account_recovery {
+                agent_ui::disconnect(self);
+                if self.live.active() {
+                    live_ui::stop(self);
+                }
+                jobs_ui::tick(self, &ctx);
+                ui.vertical_centered(|ui| {
+                    ui.add_space(48.0);
+                    ui.heading(tl!("Reconnect to continue"));
+                    ui.label(tl!("Reconnect your account to continue editing. Your open work can still be saved."));
+                    let documents = self.session.documents().iter().enumerate().map(|(i, d)| (i, d.doc.name.clone())).collect::<Vec<_>>();
+                    for (index, name) in documents {
+                        if widgets::secondary_button(ui, &format!("{}: {name}", tl!("Save a Copy")), 260.0).clicked() {
+                            self.session.set_active(index);
+                            if let Err(e) = self.save_as(None) {
+                                self.ui.status = e;
+                            }
+                        }
+                    }
+                    if widgets::primary_button(ui, tl!("Reconnect Account"), 200.0).clicked() {
+                        nova_live::identity::connect("novaphoto");
+                    }
+                    if widgets::secondary_button(ui, tl!("Try Again"), 200.0).clicked() {
+                        nova_live::identity::refresh();
+                    }
+                    ui.label(&self.ui.status);
+                });
+                dialogs::show(self, &ctx);
+                self.poll_file_dialog(&ctx, Some(frame));
+                ctx.request_repaint_after(std::time::Duration::from_secs(1));
+                return;
+            }
+        }
+        #[cfg(not(target_arch = "wasm32"))]
         {
             live_ui::pump(self, &ctx);
-            live_ui::bar(self, ui);
             live_ui::window(self, &ctx);
+            agent_ui::window(self, &ctx);
+            shared_ui::window(self, &ctx);
+            shared_ui::paint_comments(self, &ctx);
         }
         self.hover_layer = None;
         i18n::set_current(i18n::Lang::from_pref(&self.session.prefs().interface.language));
@@ -2060,13 +2161,13 @@ impl eframe::App for NovaphotoApp {
         }
         if chrome && self.ui.panels.dock {
             panels::right_dock(self, ui);
+            panel_docking::show_native(self, &ctx);
         }
         let t = theme::Tokens::get(&ctx);
         let backdrop = if chrome { prefs_ui::pasteboard_color(self).unwrap_or(t.canvas) } else { egui::Color32::BLACK };
         egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
             canvas::document_area(self, ui);
         });
-        panels::properties_window(self, &ctx);
         brush_panel::window(self, &ctx);
         preset_panels::windows(self, &ctx);
         gradient_ui::editor_window(self, &ctx);

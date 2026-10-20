@@ -1,7 +1,7 @@
 //! Application-owned panel IDs and commands around the shared docking layout.
 
 use crate::dock::Group;
-use nova_ui::docking::{Action, Floating, Layout, Node, Placement, Zone};
+use nova_ui::docking::{Action, Layout, Node, Placement, Zone};
 use nova_ui::layout::{SplitAxis, SplitSize};
 use serde_json::{Value, json};
 
@@ -84,10 +84,6 @@ fn legacy_layout(app: &NovaphotoApp, all: bool) -> Layout<String> {
             Group::Brushes => app.ui.dock_tabs.brushes,
         };
         let active = labels.get(selected).and_then(|label| normalize(label)).and_then(|id| panels.iter().position(|p| p == id)).unwrap_or(0);
-        if group == Group::Properties && !pro {
-            layout.floating.push(Floating { panels, active, rect: [120.0, 160.0, 320.0, 440.0] });
-            continue;
-        }
         let node = Node::Tabs { panels, active };
         layout.root = Some(match layout.root.take() {
             Some(second) => Node::Split {
@@ -164,6 +160,27 @@ fn placement(params: &Value) -> Result<Placement<String>, String> {
 }
 
 pub(crate) fn command(app: &mut NovaphotoApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
+    if id == "window.panels.restore" {
+        let panels = std::mem::take(&mut app.ui.native_panels);
+        for panel in panels {
+            let _ = change(app, "activate", &json!({"panel":panel}));
+        }
+        return Some(Ok(json!({"restored":true})));
+    }
+    if id == "window.panel.detach" {
+        return Some((|| {
+            let panel = params.get("panel").and_then(Value::as_str).and_then(normalize).ok_or("Choose a registered panel")?;
+            if app.session.prefs().workspace_locked {
+                return Err("Workspace is locked".into());
+            }
+            if !app.ui.native_panels.iter().any(|p| p == panel) {
+                change(app, "activate", &json!({"panel":panel}))?;
+                change(app, "close", &json!({"panel":panel}))?;
+                app.ui.native_panels.push(panel.to_string());
+            }
+            Ok(json!({"panel":panel,"native":true}))
+        })());
+    }
     if id == "window.panel.group" {
         return Some(group_command(app, params));
     }
@@ -845,7 +862,17 @@ struct PanelContent<'a> {
 }
 
 fn panel_menu(app: &mut NovaphotoApp, ui: &mut egui::Ui, panel: &str) {
+    if !app.ui.native_panels.iter().any(|p| p == panel) && ui.button(tl!("Move Panel to Separate Window")).clicked() {
+        if let Some(Err(e)) = command(app, "window.panel.detach", &json!({"panel":panel})) {
+            app.ui.status = e;
+        }
+        ui.close();
+    }
     match panel {
+        "color" => {
+            ui.checkbox(&mut app.ui.color_panel.wheel, tl!("Color Wheel"));
+            ui.separator();
+        }
         "layers" => {
             crate::layer_row_ui::panel_menu(app, ui);
             ui.separator();
@@ -863,6 +890,60 @@ fn panel_menu(app: &mut NovaphotoApp, ui: &mut egui::Ui, panel: &str) {
             ui.separator();
         }
         _ => {}
+    }
+}
+
+pub(crate) fn show_native(app: &mut NovaphotoApp, ctx: &egui::Context) {
+    let mut panels = Vec::new();
+    for panel in app.ui.native_panels.iter().take(PANELS.len()) {
+        if PANELS.iter().any(|p| p.0 == panel) && !panels.contains(panel) {
+            panels.push(panel.clone());
+        }
+    }
+    app.ui.native_panels = panels.clone();
+    for panel in panels {
+        let Some(label) = PANELS.iter().find(|p| p.0 == panel).map(|p| p.1) else {
+            continue;
+        };
+        let mut restore = false;
+        if ctx.embed_viewports() {
+            let mut open = true;
+            egui::Window::new(tl!(label))
+                .id(egui::Id::new(("native-panel-fallback", &panel)))
+                .open(&mut open)
+                .default_size([300.0, 480.0])
+                .constrain_to(ctx.content_rect())
+                .show(ctx, |ui| {
+                    egui::ScrollArea::vertical().show(ui, |ui| body(app, ui, &panel));
+                });
+            restore = !open;
+        } else {
+            let id = egui::ViewportId::from_hash_of(("novaphoto-panel", &panel));
+            let builder = egui::ViewportBuilder::default()
+                .with_title(format!("{} — Nova Photo", tl!(label)))
+                .with_inner_size([320.0, 520.0])
+                .with_min_inner_size([220.0, 180.0]);
+            let parent_position = ctx.input(|i| i.viewport().inner_rect.map(|r| r.min)).unwrap_or_default();
+            ctx.show_viewport_immediate(id, builder, |ui, _| {
+                if ui.ctx().input(|i| i.viewport().close_requested()) {
+                    restore = true;
+                }
+                if ui.ctx().input(|i| i.viewport().inner_rect.is_some() && i.viewport().monitor_size.is_none()) {
+                    ui.ctx().send_viewport_cmd(egui::ViewportCommand::OuterPosition(parent_position + egui::vec2(40.0, 40.0)));
+                }
+                egui::CentralPanel::default().show(ui, |ui| {
+                    if ui.button(tl!("Return to Main Window")).clicked() {
+                        restore = true;
+                    }
+                    ui.separator();
+                    egui::ScrollArea::vertical().show(ui, |ui| body(app, ui, &panel));
+                });
+            });
+        }
+        if restore {
+            app.ui.native_panels.retain(|p| p != &panel);
+            let _ = change(app, "activate", &json!({"panel":panel}));
+        }
     }
 }
 

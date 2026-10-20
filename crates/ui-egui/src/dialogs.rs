@@ -278,7 +278,13 @@ pub fn show(app: &mut NovaphotoApp, ctx: &egui::Context) {
             crate::field_tab::begin(ui.ctx());
             match d.kind {
                 DialogKind::NewDocument => {
-                    if crate::new_doc_ui::body(app, ui, &mut fields) {
+                    let room = (ctx.content_rect().height() - DIALOG_CHROME).max(120.0);
+                    if egui::ScrollArea::vertical()
+                        .id_salt(id.with("new-body"))
+                        .max_height(room)
+                        .show(ui, |ui| crate::new_doc_ui::body(app, ui, &mut fields))
+                        .inner
+                    {
                         outcome = Some(true);
                     }
                 }
@@ -310,6 +316,7 @@ pub fn show(app: &mut NovaphotoApp, ctx: &egui::Context) {
                     ui.add_space(8.0);
                     about_tab_body(app, ui, chosen);
                 }
+                DialogKind::Command if crate::carousel_ui::owns(&fields) => crate::carousel_ui::body(app, ui, &mut fields, d.id),
                 DialogKind::Command if crate::guide_layout_ui::owns(&fields) => outcome = crate::guide_layout_ui::body(app, ui, &mut fields, interactive),
                 DialogKind::Command if crate::brush_preset_dialog::owns(&fields) => {
                     outcome = crate::brush_preset_dialog::body(app, ui, &mut fields, interactive)
@@ -577,6 +584,7 @@ fn display_title(d: &Dialog) -> String {
 
 pub fn title(d: &Dialog) -> String {
     match d.kind {
+        DialogKind::NewDocument if d.fields.get("__carousel").and_then(Value::as_bool) == Some(true) => "New Carousel".into(),
         DialogKind::NewDocument => "New Document".into(),
         DialogKind::About if d.fields.get("systemInfo").and_then(Value::as_bool) == Some(true) => "System Info".into(),
         DialogKind::About => "About Nova Photo".into(),
@@ -588,6 +596,9 @@ pub fn title(d: &Dialog) -> String {
 
 /// Confirm a dialog: run its action and close it. Used by the OK button and by automation.
 pub fn confirm(app: &mut NovaphotoApp, id: u64) -> Result<Value, String> {
+    if let Some(d) = app.ui.dialogs.iter().find(|d| d.id == id).filter(|d| crate::carousel_ui::owns(&d.fields)) {
+        crate::carousel_ui::validate(app, &d.fields)?;
+    }
     if crate::layer_style::color_picker::has_child(app, id) {
         return Err("confirm or cancel the Layer Style color picker first".into());
     }
@@ -600,7 +611,18 @@ pub fn confirm(app: &mut NovaphotoApp, id: u64) -> Result<Value, String> {
     let d = app.ui.close_dialog(id).ok_or_else(|| format!("no dialog {id}"))?;
     match d.kind {
         DialogKind::NewDocument => {
-            let r = app.run("file.new", crate::new_doc_ui::command_params(&d.fields));
+            let carousel = d.fields.get("__carousel").and_then(Value::as_bool) == Some(true);
+            let mut params = crate::new_doc_ui::command_params(&d.fields);
+            if carousel {
+                params["cards"] = d.fields.get("__cards").cloned().unwrap_or(json!(5));
+            }
+            let r = app.run(if carousel { "file.new.carousel" } else { "file.new" }, params);
+            if r.is_ok() {
+                let ratio = d.fields.get("pixelAspectRatio").and_then(Value::as_f64).unwrap_or(1.0);
+                if ratio != 1.0 {
+                    app.ui.view.pixel_aspect = format!("custom:{ratio}:Document");
+                }
+            }
             if let Some(i) = app.session.active_index() {
                 app.ui.views[i].fit_pending = true;
             }
@@ -611,6 +633,7 @@ pub fn confirm(app: &mut NovaphotoApp, id: u64) -> Result<Value, String> {
             }
             r
         }
+        DialogKind::Command if crate::carousel_ui::owns(&d.fields) => crate::carousel_ui::confirm(app, &d.fields),
         DialogKind::Command if crate::guide_layout_ui::owns(&d.fields) => crate::guide_layout_ui::confirm(app, &d.fields),
         DialogKind::Command if crate::brush_preset_dialog::owns(&d.fields) => crate::brush_preset_dialog::confirm(app, &d.fields),
         DialogKind::Command if crate::fill_ui::owns(&d.fields) => crate::fill_ui::confirm(app, &d.fields),

@@ -1052,6 +1052,7 @@ pub struct DockTabs {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ColorPanelState {
+    pub wheel: bool,
     /// The panel edits the background colour (its chip was clicked), not the foreground.
     pub background: bool,
     /// Color Picker › Only Web Colors, kept across opens like Photoshop (#4995).
@@ -1232,6 +1233,9 @@ pub struct UiState {
     /// Invalidates in-flight gestures when a workspace is replaced.
     #[serde(skip)]
     pub docking_generation: u64,
+    /// Panel IDs in native viewports. Screen positions remain local to the window manager.
+    #[serde(default)]
+    pub native_panels: Vec<String>,
     /// Panels belonging to explicitly collapsed custom tab groups.
     #[serde(default)]
     pub docking_collapsed: Vec<String>,
@@ -1369,6 +1373,7 @@ impl Default for UiState {
             docking: None,
             docking_hidden: Default::default(),
             docking_generation: 0,
+            native_panels: Vec::new(),
             docking_collapsed: Vec::new(),
             docking_reveal: None,
             color_panel: Default::default(),

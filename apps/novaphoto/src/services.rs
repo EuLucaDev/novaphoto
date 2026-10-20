@@ -462,6 +462,77 @@ fn shell_word(s: &str) -> String {
     if s.bytes().all(|b| b.is_ascii_alphanumeric() || b"/._-+:,@".contains(&b)) { s.to_string() } else { format!("'{}'", s.replace('\'', r"'\''")) }
 }
 
+struct AgentGuard {
+    _server: crate::control_server::Managed,
+    token_file: PathBuf,
+}
+impl Drop for AgentGuard {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.token_file);
+    }
+}
+fn connect_agent(ctx: &egui::Context, root: &str) -> Result<novaphoto_ui_egui::agent_ui::Connection, String> {
+    let root = Path::new(root);
+    if !root.is_absolute() || !root.is_dir() {
+        return Err("Choose an existing absolute workspace folder".into());
+    }
+    let workspace = novaphoto_automation::AuthorizedWorkspace::new(Some(root), Some(root)).map_err(|e| e.to_string())?;
+    let dir = crate::app_dirs::config_dir().ok_or("Settings folder unavailable")?;
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let filename = format!("agent-{}.token", novaphoto_automation::security::generate_token().map_err(|e| e.to_string())?);
+    let token_file = dir.join(filename);
+    let token = novaphoto_automation::security::server_token(None, Some(&token_file)).map_err(|e| e.to_string())?;
+    let (receiver, server) = crate::control_server::managed(token, ctx.clone()).map_err(|e| {
+        let _ = std::fs::remove_file(&token_file);
+        e.to_string()
+    })?;
+    let endpoint = format!("127.0.0.1:{}", server.port);
+    let candidate = std::env::current_exe().ok().and_then(|p| p.parent().map(|p| p.join(if cfg!(windows) { "novaphoto-cli.exe" } else { "novaphoto-cli" })));
+    let cli = candidate.filter(|p| p.is_file()).map_or_else(|| "novaphoto-cli".into(), |p| p.to_string_lossy().into_owned());
+    let probe_endpoint = endpoint.clone();
+    let probe_token_file = token_file.clone();
+    let probe = Box::new(move || {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let (endpoint, path) = (probe_endpoint.clone(), probe_token_file.clone());
+        std::thread::spawn(move || {
+            let run = || -> Result<(), String> {
+                use std::io::{BufRead, BufReader, Write};
+                let token = novaphoto_automation::security::client_token(None, Some(&path)).map_err(|e| e.to_string())?;
+                let addr = endpoint.parse().map_err(|_| "Invalid local endpoint")?;
+                let mut stream = std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_secs(2)).map_err(|e| e.to_string())?;
+                stream.set_read_timeout(Some(std::time::Duration::from_secs(3))).map_err(|e| e.to_string())?;
+                stream.set_write_timeout(Some(std::time::Duration::from_secs(3))).map_err(|e| e.to_string())?;
+                let copy = stream.try_clone().map_err(|e| e.to_string())?;
+                let mut reader = BufReader::new(copy);
+                for request in [
+                    serde_json::json!({"id":"auth","method":"auth","params":{"token":token}}),
+                    serde_json::json!({"id":"probe","method":"ui.inspect","params":{}}),
+                ] {
+                    writeln!(stream, "{request}").map_err(|e| e.to_string())?;
+                    let mut line = String::new();
+                    std::io::Read::take(std::io::Read::by_ref(&mut reader), 1024 * 1024).read_line(&mut line).map_err(|e| e.to_string())?;
+                    let response: serde_json::Value = serde_json::from_str(&line).map_err(|_| "Invalid local reply")?;
+                    if response.get("ok") != Some(&serde_json::Value::Bool(true)) {
+                        return Err("Local connection test failed".into());
+                    }
+                }
+                Ok(())
+            };
+            let _ = tx.send(run());
+        });
+        rx
+    });
+    Ok(novaphoto_ui_egui::agent_ui::Connection {
+        probe,
+        receiver,
+        services: Box::new(native(Some(workspace))),
+        endpoint,
+        cli,
+        token_file: token_file.to_string_lossy().into_owned(),
+        guard: Box::new(AgentGuard { _server: server, token_file }),
+    })
+}
+
 pub fn native(automation: Option<novaphoto_automation::AuthorizedWorkspace>) -> Services {
     let clip: Rc<RefCell<Option<arboard::Clipboard>>> = Rc::default();
     let automation_read = automation.clone().map(|workspace| {
@@ -473,6 +544,14 @@ pub fn native(automation: Option<novaphoto_automation::AuthorizedWorkspace>) -> 
     });
     let automation_write = automation.clone().map(|workspace| {
         Box::new(move |path: &str, bytes: &[u8]| workspace.write(path, bytes).map_err(|error| error.to_string())) as novaphoto_ui_egui::AutomationWriteFn
+    });
+    let automation_write_new = automation.clone().map(|workspace| {
+        Box::new(move |path: &str, bytes: &[u8]| workspace.write_new(path, bytes).map_err(|e| e.to_string())) as novaphoto_ui_egui::AutomationWriteFn
+    });
+    let automation_carousel = automation.clone().map(|workspace| {
+        Box::new(move |session: &mut novaphoto_engine::Session, params: &serde_json::Value| {
+            workspace.export_carousel(session, params).map_err(|e| e.to_string())
+        }) as novaphoto_ui_egui::AutomationCarouselFn
     });
     let automation_open_pcraft = automation.clone().map(|workspace| {
         Box::new(move |path: &str| {
@@ -494,6 +573,7 @@ pub fn native(automation: Option<novaphoto_automation::AuthorizedWorkspace>) -> 
         }) as novaphoto_ui_egui::AutomationCommandFn
     });
     Services {
+        agent_connect: Some(Box::new(connect_agent)),
         import: Some(Box::new(|name: &str, bytes: &[u8], max_svg_group_depth: usize| {
             crate::crash_guard::guard("Open", || {
                 novaphoto_io::import_with_svg_group_depth(name, bytes, max_svg_group_depth).map(|r| (r.document, r.warnings)).map_err(|e| e.to_string())
@@ -513,6 +593,8 @@ pub fn native(automation: Option<novaphoto_automation::AuthorizedWorkspace>) -> 
         })),
         automation_read,
         automation_write,
+        automation_write_new,
+        automation_carousel,
         automation_open_pcraft,
         automation_save,
         automation_command,
@@ -533,6 +615,18 @@ pub fn native(automation: Option<novaphoto_automation::AuthorizedWorkspace>) -> 
                     None => slot.insert(arboard::Clipboard::new().map_err(|e| e.to_string())?),
                 };
                 cb.set_image(arboard::ImageData { width: w as usize, height: h as usize, bytes: std::borrow::Cow::Borrowed(px) }).map_err(|e| e.to_string())
+            })
+        }),
+        clipboard_get_svg: Some({
+            let clip = clip.clone();
+            Box::new(move || {
+                let mut slot = clip.try_borrow_mut().ok()?;
+                let cb = match slot.as_mut() {
+                    Some(cb) => cb,
+                    None => slot.insert(arboard::Clipboard::new().ok()?),
+                };
+                let text = cb.get_text().ok()?;
+                (text.len() <= 8 * 1024 * 1024 && novaphoto_io::svg::is_svg(text.as_bytes())).then(|| text.into_bytes())
             })
         }),
         clipboard_get_image: Some({

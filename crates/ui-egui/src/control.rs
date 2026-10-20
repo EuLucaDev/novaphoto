@@ -417,6 +417,12 @@ fn dispatch(app: &mut NovaphotoApp, ctx: &egui::Context, req: &ControlRequest) -
         "engine.execute" | "ui.menu.invoke" => {
             let Some(id) = s("command").or(s("id")) else { return err("missing `command`") };
             let params = p.get("params").cloned().unwrap_or(json!({}));
+            if id == "file.export.carousel" {
+                let Some(export) = app.services.automation_carousel.as_mut() else {
+                    return err("automation write authority is absent");
+                };
+                return wrap(export(&mut app.session, &params));
+            }
             // A control-channel menu click must respect the same modal gate as the native menu.
             // Camera Raw's documented `ui` requests operate its already-open dialog rather
             // than click a menu. Only that continuation may pass its own modal gate.
@@ -1277,6 +1283,28 @@ fn dispatch(app: &mut NovaphotoApp, ctx: &egui::Context, req: &ControlRequest) -
             }
             None => err("missing `path`"),
         },
+        "app.place" => {
+            if app.account_recovery {
+                return err(tl!("Reconnect Account"));
+            }
+            let Some(path) = s("path") else {
+                return err("missing `path`");
+            };
+            let target = match p.get("index") {
+                Some(value) => value.as_u64().and_then(|i| usize::try_from(i).ok()).and_then(|i| app.session.documents().get(i)).map(|d| d.doc.id),
+                None => app.session.active().map(|d| d.doc.id),
+            };
+            let Some(target) = target else {
+                return err("no document at that index");
+            };
+            let read = match app.services.automation_read.as_mut() {
+                Some(read) => read(path),
+                None => Err("automation read authority is not configured".into()),
+            };
+            wrap(read.and_then(|(name, bytes)| {
+                app.with_document(target, |app| novaphoto_engine::file_cmds::place_bytes(&mut app.session, &name, bytes, None, p).map_err(|e| e.to_string()))
+            }))
+        }
         "app.save" => match crate::targa_options_ui::bits_param(p, "app.save") {
             Ok(tga_bits) => {
                 let path = s("path").map(str::to_string);
@@ -1409,6 +1437,27 @@ mod tests {
         }
     }
 
+    #[test]
+    fn placing_over_the_bridge_uses_only_the_read_capability() {
+        let ctx = egui::Context::default();
+        let mut app = NovaphotoApp::new(novaphoto_engine::Session::new(), crate::Services::default());
+        app.run("file.new", json!({"width":32,"height":32})).unwrap();
+        let no_grant = call(&mut app, &ctx, "app.place", json!({"path":"vector.svg"}));
+        assert_eq!(no_grant["ok"], false);
+        app.services.automation_read = Some(Box::new(|path| {
+            if path == "vector.svg" {
+                Ok((path.into(), br#"<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="red"/></svg>"#.to_vec()))
+            } else {
+                Err("outside workspace".into())
+            }
+        }));
+        let denied = call(&mut app, &ctx, "app.place", json!({"path":"../outside.svg"}));
+        assert_eq!(denied["ok"], false);
+        let before = app.session.active().unwrap().doc.layers.len();
+        let placed = call(&mut app, &ctx, "app.place", json!({"path":"vector.svg"}));
+        assert_eq!(placed["ok"], true, "{placed}");
+        assert_eq!(app.session.active().unwrap().doc.layers.len(), before + 1);
+    }
     #[test]
     fn ui_set_turns_the_stroke_trace_on_and_off_at_runtime() {
         let mut app = NovaphotoApp::new(novaphoto_engine::Session::new(), crate::Services::default());

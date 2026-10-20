@@ -641,6 +641,10 @@ pub fn title_bar(app: &mut NovaphotoApp, ui: &mut egui::Ui) {
                 let controls_end = {
                     let ui = &mut group_ui;
                     ui.spacing_mut().item_spacing.x = 6.0;
+                    #[cfg(not(target_arch = "wasm32"))]
+                    if ui.available_width() >= 116.0 {
+                        crate::live_ui::button(app, ui);
+                    }
                     let mut ws = app.ui.workspace.clone();
                     let opts = [
                         // Keys stay English (`apply_workspace` matches them); the dropdown
@@ -915,12 +919,27 @@ pub fn options_bar(app: &mut NovaphotoApp, ui: &mut egui::Ui) {
         .exact_size(options_bar_height(t.pro, narrow))
         .frame(egui::Frame::NONE.fill(t.chrome).inner_margin(egui::Margin::symmetric(10, 0)))
         .show(ui, |ui| {
+            let available = ui.available_rect_before_wrap();
+            if available.width() < 1280.0 {
+                let rect = egui::Rect::from_min_max(egui::pos2(available.right() - 74.0, available.top()), available.max);
+                let mut more = ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(egui::Layout::left_to_right(egui::Align::Center)));
+                more.menu_button(tl!("More"), |ui| {
+                    ui.set_max_width(540.0);
+                    egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| options_contents(app, ui, true));
+                });
+                ui.set_max_width((available.width() - 84.0).max(1.0));
+            }
             ui.style_mut().spacing.scroll = egui::style::ScrollStyle { bar_width: 4.0, ..egui::style::ScrollStyle::floating() };
-            egui::ScrollArea::horizontal().id_salt("tool-options").auto_shrink([false, false]).show(ui, |ui| {
-            // Font ink can extend beyond its advance width at fractional positions.
-            // Include its gutter in the container layout, including right-aligned actions.
-            egui::Frame::NONE.inner_margin(egui::Margin { right: 2, ..Default::default() }).show(ui, |ui| {
-            crate::direction::horizontal_centered(ui, |ui| {
+            egui::ScrollArea::horizontal().id_salt("tool-options").auto_shrink([false, false]).show(ui, |ui| options_contents(app, ui, false));
+        });
+}
+
+fn options_contents(app: &mut NovaphotoApp, ui: &mut egui::Ui, wrapped: bool) {
+    let t = Tokens::get(ui.ctx());
+    // Font ink can extend beyond its advance width at fractional positions.
+    // Include its gutter in the container layout, including right-aligned actions.
+    egui::Frame::NONE.inner_margin(egui::Margin { right: 2, ..Default::default() }).show(ui, |ui| {
+            let contents=|ui:&mut egui::Ui| {
                 if t.pro {
                     crate::chrome_ui::home_button(app, ui);
                     widgets::vline(ui, 22.0);
@@ -1510,11 +1529,10 @@ pub fn options_bar(app: &mut NovaphotoApp, ui: &mut egui::Ui) {
                     crate::symmetry_ui::menu(app, ui);
                 }
                 crate::brush_panel::commit_gesture(app, ui.ctx(), &brush_before, &brush);
-            });
+            };
+            if wrapped {ui.horizontal_wrapped(contents);} else {crate::direction::horizontal_centered(ui,contents);}
             reveal_focused_control(ui);
             });
-            });
-        });
 }
 
 /// Width of the Layers panel's Opacity and Fill fields, with room for their pop-up slider's ▾.
@@ -1697,8 +1715,8 @@ pub fn right_dock(app: &mut NovaphotoApp, ui: &mut egui::Ui) {
                     ("brush", tl!("Brushes"), Group::Brushes),
                 ];
                 for (icon, name, g) in entries {
-                    // Studio floats Properties outside the dock.
-                    let docked = t.pro || g != Group::Properties;
+                    // Every theme docks groups unless the user explicitly floats a panel.
+                    let docked = true;
                     let on = if customized { crate::panel_docking::rail_on(app, g) } else { g.shown(&p) && !(docked && app.ui.dock.is_collapsed(g)) };
                     if icons::rail_button(ui, icon, rb, on, name).clicked() {
                         if customized {
@@ -1731,10 +1749,9 @@ pub fn request_dock_width(ctx: &egui::Context, w: f32) {
 
 fn dock_panels(app: &mut NovaphotoApp, ui: &mut egui::Ui, p: &crate::state::Panels, t: &Tokens) {
     use crate::dock::Group;
-    // Floating in Studio, Properties docks only in Pro (Photoshop).
     let shown: Vec<Group> = [
         (Group::Color, p.color),
-        (Group::Properties, t.pro && p.properties),
+        (Group::Properties, p.properties),
         (Group::Character, p.character),
         (Group::Navigator, p.navigator),
         (Group::History, p.history),
@@ -3385,66 +3402,6 @@ fn snapshot_rows(app: &mut NovaphotoApp, ui: &mut egui::Ui, selected: Option<u64
 
 // ----------------------------------------------------------------------------- properties
 
-/// Floating Properties card anchored to the canvas' top-right corner. It shows the same content as
-/// the docked panel (`properties_body`): document, layer, adjustment and mask properties.
-pub fn properties_window(app: &mut NovaphotoApp, ctx: &egui::Context) {
-    if app.ui.docking.is_some() {
-        return;
-    }
-    // Pro (Photoshop) docks Properties; Studio floats it over the canvas.
-    if !app.ui.panels.properties || Tokens::get(ctx).pro {
-        return;
-    }
-    if app.session.active().is_none() {
-        return;
-    }
-    let t = Tokens::get(ctx);
-    let canvas = app.last_canvas_rect;
-    let width = 320.0;
-    let pos = pos2(canvas.right() - width - 12.0, canvas.top() + 44.0);
-    let frame = egui::Frame::NONE
-        .fill(t.card)
-        .stroke(Stroke::new(1.0, t.card_border))
-        .corner_radius(CornerRadius::same(t.radius_lg as u8))
-        .shadow(egui::Shadow { offset: [0, 12], blur: 36, spread: 0, color: t.shadow })
-        .inner_margin(egui::Margin::same(14));
-    // A floating panel (Order::Middle like other panels, so menus, popups and dialogs stay above
-    // it), anchored to the canvas corner and dragged by its title off the part being worked on.
-    let card_id = egui::Id::new("properties-card");
-    let offset: egui::Vec2 = ctx.data(|m| m.get_temp(card_id)).unwrap_or_default();
-    let mut drag = egui::Vec2::ZERO;
-    let shown = egui::Area::new(card_id).order(egui::Order::Middle).fixed_pos(pos + offset).show(ctx, |ui| {
-        frame.show(ui, |ui| {
-            ui.set_width(width - 28.0);
-            let title = ui.horizontal(|ui| {
-                ui.label(RichText::new(tl!("Properties")).font(theme::semibold(13.5)).color(t.text));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if icons::button(ui, "minus", 22.0, false, tl!("Hide Properties")).clicked() {
-                        app.ui.panels.properties = false;
-                    }
-                });
-            });
-            let bar = title.response.rect.with_max_x(title.response.rect.right() - 28.0);
-            let grip = ui.interact(bar, card_id.with("title"), Sense::drag());
-            if grip.hovered() || grip.dragged() {
-                ui.ctx().set_cursor_icon(egui::CursorIcon::Grab);
-            }
-            drag = grip.drag_delta();
-            ui.add_space(6.0);
-            widgets::hairline(ui);
-            ui.add_space(8.0);
-            properties_body(app, ui);
-        });
-    });
-    if drag != egui::Vec2::ZERO && canvas.is_positive() {
-        // Keep the title bar inside the canvas.
-        let r = shown.response.rect.translate(drag);
-        let dx = (canvas.left() - r.left()).max(0.0) - (r.right() - canvas.right()).max(0.0);
-        let dy = (canvas.top() - r.top()).max(0.0) - (r.top() + 40.0 - canvas.bottom()).max(0.0);
-        ctx.data_mut(|m| m.insert_temp(card_id, offset + drag + egui::vec2(dx, dy)));
-    }
-}
-
 fn adjustment_controls(app: &mut NovaphotoApp, ui: &mut egui::Ui, id: LayerId, adj: &novaphoto_doc::Adjustment) {
     crate::adjust_editors::layer_editor(app, ui, id, adj);
     ui.add_space(6.0);
@@ -3496,7 +3453,7 @@ fn layer_controls(app: &mut NovaphotoApp, ui: &mut egui::Ui, layer: &Layer) {
     }
 }
 
-/// Docked Properties body (Pro theme).
+/// Properties body shared by docked and explicitly floated panels.
 fn properties_body(app: &mut NovaphotoApp, ui: &mut egui::Ui) {
     let identity = app.session.active().map(|st| (st.doc.id, st.active_layer, app.ui.mask_target, app.ui.vector_mask_target, app.ui.properties_layer));
     ui.push_id(("properties-target", identity), |ui| properties_body_inner(app, ui));
@@ -3664,6 +3621,10 @@ fn field_hsva(mut hsva: egui::ecolor::Hsva, remembered: (f32, f32)) -> egui::eco
 
 /// Photoshop Color panel: saturation/brightness field + hue strip, drawn as shaded meshes.
 fn color_field(app: &mut NovaphotoApp, ui: &mut egui::Ui) {
+    if app.ui.color_panel.wheel {
+        color_wheel(app, ui);
+        return;
+    }
     let t = Tokens::get(ui.ctx());
     let bg_active = app.ui.color_panel.background;
     let key = egui::Id::new(("color-field-hue", bg_active));
@@ -3685,6 +3646,12 @@ fn color_field(app: &mut NovaphotoApp, ui: &mut egui::Ui) {
         // SV field.
         let field_w = w - 38.0 - strip_w - 16.0;
         let (field, fresp) = ui.allocate_exact_size(vec2(field_w, h), Sense::click_and_drag());
+        fresp.context_menu(|ui| {
+            if ui.button(tl!("Color Wheel")).clicked() {
+                app.ui.color_panel.wheel = true;
+                ui.close();
+            }
+        });
         let mut mesh = egui::Mesh::default();
         let n = 16;
         for j in 0..=n {
@@ -3767,6 +3734,77 @@ fn color_field(app: &mut NovaphotoApp, ui: &mut egui::Ui) {
             }
         }
     });
+}
+
+/// The wheel uses the same sRGB tool-color conversion and numeric readout as the spectrum.
+fn color_wheel(app: &mut NovaphotoApp, ui: &mut egui::Ui) {
+    let bg = app.ui.color_panel.background;
+    let base = if bg { app.session.tools.background } else { app.session.tools.foreground };
+    let key = ui.id().with(("wheel-hue", bg));
+    let raw = srgb_hsva(base);
+    let mut hsv = field_hsva(raw, ui.data(|d| d.get_temp(key)).unwrap_or((raw.h, raw.s)));
+    hsv.a = base[3];
+    let t = Tokens::get(ui.ctx());
+    let side = ui.available_width().clamp(64.0, 240.0);
+    let (rect, response) = ui.allocate_exact_size(vec2(side, side), Sense::click_and_drag());
+    response.context_menu(|ui| {
+        if ui.button(tl!("Color Spectrum")).clicked() {
+            app.ui.color_panel.wheel = false;
+            ui.close();
+        }
+    });
+    response.clone().on_hover_text(tl!("Color Wheel — arrows adjust hue and saturation"));
+    let radius = (side * 0.5 - 8.0).max(1.0);
+    let center = rect.center();
+    let mut mesh = egui::Mesh::default();
+    mesh.colored_vertex(center, hsva_color32(egui::ecolor::Hsva::new(0.0, 0.0, hsv.v, 1.0)));
+    for i in 0..=96 {
+        let h = i as f32 / 96.0;
+        let angle = h * std::f32::consts::TAU;
+        mesh.colored_vertex(center + vec2(angle.cos(), -angle.sin()) * radius, hsva_color32(egui::ecolor::Hsva::new(h, 1.0, hsv.v, 1.0)));
+        if i > 0 {
+            mesh.add_triangle(0, i, i + 1);
+        }
+    }
+    ui.painter().add(mesh);
+    ui.painter().circle_stroke(center, radius, Stroke::new(1.0, t.separator));
+    let mut changed = false;
+    if (response.clicked() || response.dragged())
+        && let Some(point) = response.interact_pointer_pos()
+    {
+        let delta = point - center;
+        hsv.h = (-delta.y).atan2(delta.x).rem_euclid(std::f32::consts::TAU) / std::f32::consts::TAU;
+        hsv.s = (delta.length() / radius).clamp(0.0, 1.0);
+        response.request_focus();
+        changed = true;
+    }
+    if response.has_focus() {
+        ui.input(|i| {
+            let horizontal = i.num_presses(egui::Key::ArrowRight) as f32 - i.num_presses(egui::Key::ArrowLeft) as f32;
+            let vertical = i.num_presses(egui::Key::ArrowUp) as f32 - i.num_presses(egui::Key::ArrowDown) as f32;
+            hsv.h = (hsv.h + horizontal / 360.0).rem_euclid(1.0);
+            hsv.s = (hsv.s + vertical / 100.0).clamp(0.0, 1.0);
+            changed |= horizontal != 0.0 || vertical != 0.0;
+        });
+    }
+    let angle = hsv.h * std::f32::consts::TAU;
+    let marker = center + vec2(angle.cos(), -angle.sin()) * (hsv.s * radius);
+    ui.painter().circle_stroke(marker, 5.0, Stroke::new(2.0, t.text));
+    let mut brightness = hsv.v * 100.0;
+    if widgets::slider_row(ui, tl!("Brightness"), &mut brightness, 0.0..=100.0, "%", None).changed() {
+        hsv.v = brightness / 100.0;
+        changed = true;
+    }
+    let mut color = if changed { hsva_srgb(hsv) } else { base };
+    color[3] = base[3];
+    changed |= color_readout(ui, ui.id().with(("wheel-readout", bg)), &mut color);
+    if changed {
+        ui.data_mut(|d| d.insert_temp(key, (hsv.h, hsv.s)));
+        let key = if bg { "background" } else { "foreground" };
+        if let Err(error) = app.run("tools.setColors", json!({key:color})) {
+            app.ui.status = error;
+        }
+    }
 }
 
 /// Tool colours are sRGB-encoded floats; egui's Hsva works on sRGB bytes via these helpers
@@ -5522,7 +5560,7 @@ mod properties_card_tests {
         let mut h = Harness::builder().with_size(vec2(800.0, 600.0)).build_ui_state(
             |ui, app: &mut NovaphotoApp| {
                 if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("semibold".into()))) {
-                    properties_window(app, ui.ctx());
+                    properties_body(app, ui);
                 }
             },
             app,

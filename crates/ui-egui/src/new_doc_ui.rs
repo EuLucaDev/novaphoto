@@ -17,6 +17,17 @@ pub type Preset = (&'static str, u32, u32, f32);
 
 /// Photoshop's New Document categories and their blank-document presets.
 pub const CATEGORIES: &[(&str, &[Preset])] = &[
+    (
+        "Social",
+        &[
+            ("Square Post", 1080, 1080, 72.0),
+            ("Portrait Post", 1080, 1350, 72.0),
+            ("Stories and Reels", 1080, 1920, 72.0),
+            ("LinkedIn Landscape", 1200, 627, 72.0),
+            ("YouTube Thumbnail", 1280, 720, 72.0),
+            ("Website Banner", 1920, 600, 72.0),
+        ],
+    ),
     ("Recent", &[("Default Nova Photo Size", 2100, 1500, 300.0), ("HDTV 1080p", 1920, 1080, 72.0)]),
     (
         "Photo",
@@ -318,7 +329,9 @@ pub fn apply_saved_preset(f: &mut Map<String, Value>, preset: &novaphoto_engine:
 
 /// Restore every setting of a saved or recent document (all but its name).
 pub fn apply_settings(f: &mut Map<String, Value>, settings: &DocumentSettings) {
-    f.remove("backgroundColor");
+    for key in ["backgroundColor", "artboards", "colorProfile", "pixelAspectRatio"] {
+        f.remove(key);
+    }
     if let Some(params) = settings.command_params().as_object() {
         f.extend(params.clone());
     }
@@ -494,12 +507,64 @@ fn save_preset(app: &mut crate::NovaphotoApp, ui: &mut egui::Ui, f: &mut Map<Str
 
 /// Returns whether a preset double-click requested creation, after applying its settings.
 /// A recent category click can make egui count the preset double-click as a triple-click.
+fn advanced(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+    ui.add_space(6.0);
+    let carousel = f.get("__carousel").and_then(Value::as_bool) == Some(true);
+    if carousel {
+        let mut cards = get_f(f, "__cards", 5.0);
+        ui.label(tl!("Cards"));
+        if widgets::value_field(ui, &mut cards, 1.0..=100.0, "", 110.0).changed() {
+            f.insert("__cards".into(), json!(cards.round() as u32));
+        }
+        let width = get_f(f, "width", 1080.0) * cards.round();
+        let height = get_f(f, "height", 1350.0);
+        ui.label(format!("{} × {} px · {} {}", width as u32, height as u32, cards.round() as u32, tl!("Cards")));
+        let size = vec2(240.0, 44.0);
+        let (rect, _) = ui.allocate_exact_size(size, Sense::hover());
+        let t = Tokens::get(ui.ctx());
+        ui.painter().rect_filled(rect, 3.0, t.canvas);
+        let n = (cards.round() as usize).clamp(1, 100);
+        for i in 1..n {
+            let x = rect.left() + rect.width() * i as f32 / n as f32;
+            ui.painter().line_segment([pos2(x, rect.top()), pos2(x, rect.bottom())], Stroke::new(1.0, t.text_dim));
+        }
+        f.remove("artboards");
+    } else {
+        let mut boards = f.get("artboards").and_then(Value::as_bool).unwrap_or(false);
+        if widgets::checkbox(ui, &mut boards, tl!("Artboards")).changed() {
+            f.insert("artboards".into(), json!(boards));
+        }
+    }
+    egui::CollapsingHeader::new(tl!("Advanced Options")).id_salt("new-document-advanced").show(ui, |ui| {
+        use novaphoto_cms::{Builtin, ColorSpace};
+        let space = match get_s(f, "mode", "rgb").as_str() {
+            "gray" => ColorSpace::Gray,
+            "cmyk" => ColorSpace::Cmyk,
+            "lab" => ColorSpace::Lab,
+            _ => ColorSpace::Rgb,
+        };
+        let profiles = Builtin::ALL.iter().copied().filter(|b| b.profile().color_space == space).collect::<Vec<_>>();
+        let default = profiles.first().map_or("srgb", |b| b.id());
+        let mut profile = get_s(f, "colorProfile", default);
+        let options = profiles.iter().map(|b| (b.id().to_string(), b.description())).collect::<Vec<_>>();
+        ui.label(tl!("Color Profile"));
+        if widgets::dropdown(ui, "new-color-profile", &mut profile, &options, 240.0) {
+            f.insert("colorProfile".into(), json!(profile));
+        }
+        ui.label(tl!("Pixel Aspect Ratio"));
+        let mut ratio = get_f(f, "pixelAspectRatio", 1.0);
+        if widgets::value_field(ui, &mut ratio, 0.1..=10.0, "", 110.0).changed() {
+            f.insert("pixelAspectRatio".into(), json!(ratio));
+        }
+    });
+}
+
 pub fn body(app: &mut crate::NovaphotoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) -> bool {
     let t = Tokens::get(ui.ctx());
     let cat = get_s(f, "__category", "Recent");
     let mut create = false;
-    // Category tabs.
-    ui.horizontal(|ui| {
+    // Category tabs reflow rather than pushing Preset Details outside a narrow dialog.
+    ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing.x = 18.0;
         for name in CATEGORIES.iter().map(|c| c.0).chain(["Saved"]) {
             let on = cat == name;
@@ -695,6 +760,7 @@ pub fn body(app: &mut crate::NovaphotoApp, ui: &mut egui::Ui, f: &mut Map<String
                     110.0,
                 ) {
                     f.insert("mode".into(), json!(mode));
+                    f.remove("colorProfile");
                     f.remove("__savedPreset");
                 }
                 let mut depth = f.get("depth").and_then(Value::as_u64).unwrap_or(8);
@@ -758,6 +824,7 @@ pub fn body(app: &mut crate::NovaphotoApp, ui: &mut egui::Ui, f: &mut Map<String
                 f.remove("backgroundColor");
                 crate::color_picker_ui::request_field(f, "background", &crate::color_picker_ui::title_for(tl!("Background Contents")));
             }
+            advanced(ui, f);
             save_preset(app, ui, f);
         });
     });
@@ -946,6 +1013,9 @@ mod tests {
             background_color: None,
             unit: "px".into(),
             resolution_unit: "in".into(),
+            artboards: false,
+            color_profile: None,
+            pixel_aspect_ratio: None,
         };
         let mut f = Map::new();
         set_clipboard(&mut f, 20, 30);
